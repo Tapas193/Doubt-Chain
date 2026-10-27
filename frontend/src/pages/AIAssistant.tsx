@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/apiClient'
+import { useLanguage } from '../i18n/LanguageContext'
+import LanguageSelector from '../components/LanguageSelector'
+import ContentTranslationControl from '../components/ContentTranslationControl'
 
 type AIResponse = {
   answer: string
@@ -8,22 +11,22 @@ type AIResponse = {
   disclaimer: string
 }
 
-const modes = [
-  { value: 'beginner', label: 'Explain from basics' },
-  { value: 'step-by-step', label: 'Step by step' },
-  { value: 'example', label: 'With examples' },
-  { value: 'hinglish', label: 'Hinglish' },
-  { value: 'debug', label: 'Debug my code' }
-] as const
-
 function AIAssistant() {
+  const { t } = useLanguage()
   const [question, setQuestion] = useState('')
   const [subject, setSubject] = useState('')
-  const [mode, setMode] =
-    useState<(typeof modes)[number]['value']>('beginner')
+  const [mode, setMode] = useState<'beginner' | 'step-by-step' | 'example' | 'hinglish' | 'debug'>('beginner')
   const [answer, setAnswer] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const modeOptions = [
+    { value: 'beginner' as const, label: t('ai.modeBeginner') },
+    { value: 'step-by-step' as const, label: t('ai.modeStepByStep') },
+    { value: 'example' as const, label: t('ai.modeExample') },
+    { value: 'hinglish' as const, label: t('ai.modeHinglish') },
+    { value: 'debug' as const, label: t('ai.modeDebug') }
+  ]
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -66,24 +69,27 @@ function AIAssistant() {
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-100 sm:px-8">
       <div className="mx-auto max-w-3xl">
-        <Link
-          to="/"
-          className="inline-flex items-center text-sm text-cyan-300 hover:text-cyan-200"
-        >
-          ← Back to Dashboard
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link
+            to="/"
+            className="inline-flex items-center text-sm text-cyan-300 hover:text-cyan-200"
+          >
+            ← {t('common.back')}
+          </Link>
+          <LanguageSelector />
+        </div>
 
         <header className="mb-8 mt-6">
           <div className="mb-3 inline-flex rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-sm text-cyan-200">
-            Gemini AI · Learning Assistant
+            Gemini AI · {t('ai.title')}
           </div>
 
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Understand your doubts.
+            {t('ai.title')}
           </h1>
 
           <p className="mt-3 text-slate-400">
-            Ask a question and choose how you want it explained.
+            {t('ai.subtitle')}
           </p>
         </header>
 
@@ -96,7 +102,7 @@ function AIAssistant() {
               htmlFor="subject"
               className="mb-2 block text-sm font-medium"
             >
-              Subject <span className="text-slate-500">(optional)</span>
+              {t('doubts.subjectLabel')} <span className="text-slate-500">({t('common.none')})</span>
             </label>
 
             <input
@@ -110,7 +116,7 @@ function AIAssistant() {
 
           <div>
             <label htmlFor="mode" className="mb-2 block text-sm font-medium">
-              Explanation style
+              {t('ai.selectMode')}
             </label>
 
             <select
@@ -121,7 +127,7 @@ function AIAssistant() {
               }
               className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none focus:border-cyan-400"
             >
-              {modes.map((item) => (
+              {modeOptions.map((item) => (
                 <option key={item.value} value={item.value}>
                   {item.label}
                 </option>
@@ -134,14 +140,14 @@ function AIAssistant() {
               htmlFor="question"
               className="mb-2 block text-sm font-medium"
             >
-              Your question
+              {t('doubts.titleLabel')}
             </label>
 
             <textarea
               id="question"
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
-              placeholder="Explain deadlock in operating systems..."
+              placeholder={t('ai.promptPlaceholder')}
               rows={5}
               maxLength={5000}
               className="w-full resize-y rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
@@ -166,18 +172,21 @@ function AIAssistant() {
             disabled={loading}
             className="w-full rounded-xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? 'Thinking...' : 'Explain my doubt'}
+            {loading ? t('ai.asking') : t('ai.askButton')}
           </button>
         </form>
 
         {answer && (
           <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-7">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-xl font-semibold">Explanation</h2>
+              <h2 className="text-xl font-semibold">{t('ai.responseTitle')}</h2>
 
-              <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
-                AI-generated
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
+                  AI-generated
+                </span>
+                <ContentTranslationControl originalText={answer} />
+              </div>
             </div>
 
             <div className="whitespace-pre-wrap break-words leading-7 text-slate-200">
@@ -185,7 +194,7 @@ function AIAssistant() {
             </div>
 
             <p className="mt-5 border-t border-slate-800 pt-4 text-xs text-slate-500">
-              AI-generated explanation. Verify important information.
+              {t('ai.disclaimer')}
             </p>
           </section>
         )}

@@ -29,6 +29,7 @@ const doubtSummaryInclude = {
       mimeType: true,
       size: true,
       extractedText: true,
+      detectedLanguage: true,
       processingStatus: true,
       processingError: true
     }
@@ -52,12 +53,14 @@ const doubtDetailInclude = {
           mimeType: true,
           size: true,
           extractedText: true,
+          detectedLanguage: true,
           processingStatus: true,
           processingError: true
         }
       },
       _count: { select: { upvotes: true } }
     }
+
   }
 } as const
 
@@ -117,6 +120,7 @@ export async function createDoubt(input: {
           mimeType: att.mimeType,
           size: att.size,
           extractedText: att.extractedText || null,
+          detectedLanguage: att.detectedLanguage || null,
           processingStatus: att.processingStatus || 'COMPLETED',
           processingError: att.processingError || null,
           doubtId: doubt.id,
@@ -124,6 +128,7 @@ export async function createDoubt(input: {
         }))
       })
     }
+
 
     return tx.doubt.findUniqueOrThrow({
       where: { id: doubt.id },

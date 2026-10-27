@@ -8,10 +8,12 @@ import ErrorState from '../components/ErrorState'
 import { doubtService } from '../services/doubtService'
 import { Subject, Doubt } from '../types/api'
 import { useAuth } from '../context/AuthContext'
+import { useLanguage } from '../i18n/LanguageContext'
 
 export default function SubjectBoard() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
+  const { t } = useLanguage()
   const [subject, setSubject] = useState<Subject | null>(null)
   const [doubts, setDoubts] = useState<Doubt[]>([])
   const [loading, setLoading] = useState(true)
@@ -68,11 +70,11 @@ export default function SubjectBoard() {
     try {
       const updated = await doubtService.joinSubject(id, joinCode.trim())
       setSubject(updated)
-      setJoinSuccess('Successfully joined this subject board!')
+      setJoinSuccess(t('subjects.joinSuccess'))
       setShowJoinModal(false)
       setJoinCode('')
     } catch (err: any) {
-      setJoinError(err.message || 'Invalid join code')
+      setJoinError(err.message || t('subjects.invalidCode'))
     } finally {
       setJoining(false)
     }
@@ -83,9 +85,9 @@ export default function SubjectBoard() {
       <div className="mx-auto max-w-4xl space-y-6 animate-fade-in">
         {/* Navigation Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-dc-subtext">
-          <Link to="/" className="hover:text-dc-text">Home</Link>
+          <Link to="/" className="hover:text-dc-text">{t('nav.dashboard')}</Link>
           <span>/</span>
-          <Link to="/subjects" className="hover:text-dc-text">Subjects</Link>
+          <Link to="/subjects" className="hover:text-dc-text">{t('nav.subjects')}</Link>
           <span>/</span>
           <span className="text-dc-text font-medium truncate">{subject?.name || 'Board'}</span>
         </div>
@@ -103,7 +105,7 @@ export default function SubjectBoard() {
                   </span>
                   {subject.isMember && (
                     <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-0.5 text-xs font-medium text-emerald-300">
-                      ✓ Board Member
+                      ✓ {t('subjects.joinedBadge')}
                     </span>
                   )}
                 </div>
@@ -118,10 +120,10 @@ export default function SubjectBoard() {
 
                 <div className="mt-4 flex items-center gap-5 text-xs text-dc-subtext">
                   <span>
-                    <strong className="text-dc-text">{subject._count?.doubts ?? doubts.length}</strong> Doubts
+                    <strong className="text-dc-text">{subject._count?.doubts ?? doubts.length}</strong> {t('subjects.doubtsCount')}
                   </span>
                   <span>
-                    <strong className="text-dc-text">{subject._count?.members ?? 0}</strong> Members
+                    <strong className="text-dc-text">{subject._count?.members ?? 0}</strong> {t('subjects.membersCount')}
                   </span>
                 </div>
               </div>
@@ -136,7 +138,7 @@ export default function SubjectBoard() {
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
                     </svg>
-                    Join Board
+                    {t('subjects.joinSubject')}
                   </button>
                 )}
 
@@ -147,7 +149,7 @@ export default function SubjectBoard() {
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                   </svg>
-                  Ask in this Board
+                  {t('doubts.askButton')}
                 </Link>
               </div>
             </div>
@@ -165,16 +167,16 @@ export default function SubjectBoard() {
           <div className="rounded-xl border border-dc-blue/40 bg-dc-card p-5 space-y-3 shadow-lg animate-fade-in">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-dc-text">Enter Join Code for {subject?.name}</h2>
+                <h2 className="text-sm font-semibold text-dc-text">{t('subjects.enterCode')}</h2>
                 <p className="text-xs text-dc-subtext">
-                  Enter the course join code (e.g. <code className="text-dc-blue">{subject?.code}</code> or secret key) to gain full board membership.
+                  {t('subjects.subtitle')}
                 </p>
               </div>
               <button
                 onClick={() => setShowJoinModal(false)}
                 className="text-xs text-dc-subtext hover:text-dc-text"
               >
-                ✕ Cancel
+                ✕ {t('common.cancel')}
               </button>
             </div>
 
@@ -183,7 +185,7 @@ export default function SubjectBoard() {
                 <input
                   value={joinCode}
                   onChange={e => setJoinCode(e.target.value)}
-                  placeholder="Enter join code"
+                  placeholder={t('subjects.codePlaceholder')}
                   aria-label="Join code"
                   className="dc-input flex-1 min-w-[200px]"
                   autoFocus
@@ -193,12 +195,12 @@ export default function SubjectBoard() {
                   disabled={joining || !joinCode.trim()}
                   className="dc-btn-primary shrink-0"
                 >
-                  {joining ? 'Verifying…' : 'Join Board'}
+                  {joining ? t('subjects.joining') : t('subjects.joinSubject')}
                 </button>
               </form>
             ) : (
               <p className="text-xs text-amber-300">
-                Please <Link to="/login" className="underline font-semibold">sign in</Link> first to join.
+                Please <Link to="/login" className="underline font-semibold">{t('nav.signIn')}</Link> {t('subjects.joinToParticipate').toLowerCase()}
               </p>
             )}
 
@@ -221,7 +223,7 @@ export default function SubjectBoard() {
                   : 'bg-dc-card border border-dc-border text-dc-subtext hover:text-dc-text'
               }`}
             >
-              All Doubts
+              {t('doubts.filterAll')}
             </button>
             <button
               onClick={() => setIsResolved('false')}
@@ -231,7 +233,7 @@ export default function SubjectBoard() {
                   : 'bg-dc-card border border-dc-border text-dc-subtext hover:text-dc-text'
               }`}
             >
-              Unresolved
+              {t('doubts.filterUnresolved')}
             </button>
             <button
               onClick={() => setIsResolved('true')}
@@ -241,7 +243,7 @@ export default function SubjectBoard() {
                   : 'bg-dc-card border border-dc-border text-dc-subtext hover:text-dc-text'
               }`}
             >
-              Resolved
+              {t('doubts.filterResolved')}
             </button>
           </div>
 
@@ -252,12 +254,13 @@ export default function SubjectBoard() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search in this board…"
+              placeholder={t('subjects.searchPlaceholder')}
               aria-label="Search doubts in this board"
               className="dc-input pl-8 py-1.5 text-xs"
             />
           </div>
         </div>
+
 
         {/* Doubts List */}
         {loading ? (

@@ -1,39 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-
-const PROFESSIONS = [
-  { value: 'STUDENT', label: 'Student' },
-  { value: 'PROFESSOR', label: 'Professor' },
-  { value: 'CORPORATE_WORKER', label: 'Corporate Worker' },
-]
-
-function idLabel(prof: string) {
-  if (prof === 'PROFESSOR') return 'Faculty ID'
-  if (prof === 'CORPORATE_WORKER') return 'Employee ID'
-  return 'Student ID'
-}
-
-function idPlaceholder(prof: string) {
-  if (prof === 'PROFESSOR') return 'e.g. FAC-2024'
-  if (prof === 'CORPORATE_WORKER') return 'e.g. EMP-9900'
-  return 'e.g. STU-12345'
-}
+import { useLanguage } from '../i18n/LanguageContext'
+import LanguageSelector from '../components/LanguageSelector'
 
 type FieldErrors = Partial<Record<'fullName' | 'profession' | 'identificationNumber' | 'email' | 'password' | 'confirmPassword', string>>
-
-function validate(form: ReturnType<typeof defaultForm>): FieldErrors {
-  const errs: FieldErrors = {}
-  if (!form.fullName.trim()) errs.fullName = 'Full name is required.'
-  if (!form.profession) errs.profession = 'Select your profession.'
-  if (!form.identificationNumber.trim()) errs.identificationNumber = `${idLabel(form.profession)} is required.`
-  else if (!/^[A-Za-z0-9\-_]+$/.test(form.identificationNumber.trim())) errs.identificationNumber = 'Only letters, numbers, hyphens, and underscores.'
-  if (!form.email.trim()) errs.email = 'Email is required.'
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) errs.email = 'Enter a valid email address.'
-  if (form.password.length < 6) errs.password = 'At least 6 characters.'
-  if (form.confirmPassword !== form.password) errs.confirmPassword = 'Passwords do not match.'
-  return errs
-}
 
 function defaultForm() {
   return { fullName: '', profession: '', identificationNumber: '', email: '', password: '', confirmPassword: '' }
@@ -60,12 +31,38 @@ function Field({ id, label, sub, error, children }: FieldProps) {
 
 export default function Register() {
   const { register } = useAuth()
+  const { t } = useLanguage()
   const navigate = useNavigate()
   const [form, setForm] = useState(defaultForm)
   const [showPw, setShowPw] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const professions = [
+    { value: 'STUDENT', label: t('auth.professionStudent') },
+    { value: 'PROFESSOR', label: t('auth.professionProfessor') },
+    { value: 'CORPORATE_WORKER', label: t('auth.professionCorporate') },
+  ]
+
+  const idLabelText = (prof: string) => {
+    if (prof === 'PROFESSOR') return 'Faculty ID'
+    if (prof === 'CORPORATE_WORKER') return 'Employee ID'
+    return t('auth.idLabel')
+  }
+
+  const validateForm = (): FieldErrors => {
+    const errs: FieldErrors = {}
+    if (!form.fullName.trim()) errs.fullName = t('auth.fieldRequired')
+    if (!form.profession) errs.profession = t('auth.fieldRequired')
+    if (!form.identificationNumber.trim()) errs.identificationNumber = t('auth.fieldRequired')
+    else if (!/^[A-Za-z0-9\-_]+$/.test(form.identificationNumber.trim())) errs.identificationNumber = 'Only letters, numbers, hyphens, and underscores.'
+    if (!form.email.trim()) errs.email = t('auth.fieldRequired')
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) errs.email = 'Enter a valid email address.'
+    if (form.password.length < 6) errs.password = t('auth.minPasswordLength')
+    if (form.confirmPassword !== form.password) errs.confirmPassword = t('auth.passwordMismatch')
+    return errs
+  }
 
   const set = (k: keyof ReturnType<typeof defaultForm>) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm(f => ({ ...f, [k]: e.target.value }))
@@ -75,7 +72,7 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitError(null)
-    const errs = validate(form)
+    const errs = validateForm()
     if (Object.keys(errs).length) { setFieldErrors(errs); return }
     setLoading(true)
     try {
@@ -99,6 +96,11 @@ export default function Register() {
     <div className="relative flex min-h-screen items-center justify-center px-4 py-12">
       <div className="dc-grid-bg" aria-hidden="true" />
 
+      {/* Language Selector in Top Right */}
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageSelector />
+      </div>
+
       <div className="relative z-10 w-full max-w-[440px] animate-slide-up">
         {/* Brand */}
         <div className="mb-8 text-center">
@@ -106,8 +108,8 @@ export default function Register() {
             <span className="h-2.5 w-2.5 rounded-full bg-dc-red shadow-dc-red" />
             <span className="text-xs font-semibold tracking-[0.2em] text-dc-subtext uppercase">Doubt-Chain</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-dc-text">Create your account</h1>
-          <p className="mt-1.5 text-sm text-dc-subtext">Use your organizational email to join your institution's network.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-dc-text">{t('auth.registerTitle')}</h1>
+          <p className="mt-1.5 text-sm text-dc-subtext">{t('auth.registerSubtitle')}</p>
         </div>
 
         <div className="dc-card p-6">
@@ -122,45 +124,45 @@ export default function Register() {
           )}
 
           <form onSubmit={handleSubmit} noValidate className="space-y-5">
-            <Field id="fullName" label="Full Name" error={fieldErrors.fullName}>
+            <Field id="fullName" label={t('auth.fullNameLabel')} error={fieldErrors.fullName}>
               <input
                 id="fullName"
                 type="text"
                 autoComplete="name"
                 value={form.fullName}
                 onChange={set('fullName')}
-                placeholder="Jane Doe"
+                placeholder={t('auth.fullNamePlaceholder')}
                 className={`dc-input ${fieldErrors.fullName ? 'dc-input-error' : ''}`}
               />
             </Field>
 
-            <Field id="profession" label="Profession" error={fieldErrors.profession}>
+            <Field id="profession" label={t('auth.professionLabel')} error={fieldErrors.profession}>
               <select
                 id="profession"
                 value={form.profession}
                 onChange={set('profession')}
                 className={`dc-input ${fieldErrors.profession ? 'dc-input-error' : ''}`}
               >
-                <option value="">Select your profession</option>
-                {PROFESSIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                <option value="">-- {t('auth.professionLabel')} --</option>
+                {professions.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
               </select>
             </Field>
 
-            <Field id="idnum" label={idLabel(form.profession)} error={fieldErrors.identificationNumber}>
+            <Field id="idnum" label={idLabelText(form.profession)} error={fieldErrors.identificationNumber}>
               <input
                 id="idnum"
                 type="text"
                 value={form.identificationNumber}
                 onChange={set('identificationNumber')}
-                placeholder={idPlaceholder(form.profession)}
+                placeholder={t('auth.idPlaceholder')}
                 className={`dc-input ${fieldErrors.identificationNumber ? 'dc-input-error' : ''}`}
               />
             </Field>
 
             <Field
               id="email"
-              label="Organizational Email"
-              sub="College, university, or company email. Not verified by default."
+              label={t('auth.emailLabel')}
+              sub="College, university, or company email."
               error={fieldErrors.email}
             >
               <input
@@ -169,12 +171,12 @@ export default function Register() {
                 autoComplete="email"
                 value={form.email}
                 onChange={set('email')}
-                placeholder="you@university.edu"
+                placeholder={t('auth.emailPlaceholder')}
                 className={`dc-input ${fieldErrors.email ? 'dc-input-error' : ''}`}
               />
             </Field>
 
-            <Field id="password" label="Create Password" error={fieldErrors.password}>
+            <Field id="password" label={t('auth.passwordLabel')} error={fieldErrors.password}>
               <div className="relative">
                 <input
                   id="password"
@@ -182,7 +184,7 @@ export default function Register() {
                   autoComplete="new-password"
                   value={form.password}
                   onChange={set('password')}
-                  placeholder="Min. 6 characters"
+                  placeholder={t('auth.passwordPlaceholder')}
                   className={`dc-input pr-10 ${fieldErrors.password ? 'dc-input-error' : ''}`}
                 />
                 <button
@@ -205,14 +207,14 @@ export default function Register() {
               </div>
             </Field>
 
-            <Field id="confirm" label="Confirm Password" error={fieldErrors.confirmPassword}>
+            <Field id="confirm" label={t('auth.confirmPasswordLabel')} error={fieldErrors.confirmPassword}>
               <input
                 id="confirm"
                 type={showPw ? 'text' : 'password'}
                 autoComplete="new-password"
                 value={form.confirmPassword}
                 onChange={set('confirmPassword')}
-                placeholder="Re-enter password"
+                placeholder={t('auth.confirmPasswordPlaceholder')}
                 className={`dc-input ${fieldErrors.confirmPassword ? 'dc-input-error' : ''}`}
               />
             </Field>
@@ -224,18 +226,19 @@ export default function Register() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                   </svg>
-                  Creating account…
+                  {t('auth.registering')}
                 </>
-              ) : 'Create Account'}
+              ) : t('auth.registerTitle')}
             </button>
           </form>
 
           <p className="mt-5 text-center text-sm text-dc-subtext">
-            Already have an account?{' '}
-            <Link to="/login" className="font-medium text-dc-blue hover:underline underline-offset-2">Sign in</Link>
+            {t('auth.haveAccount')}{' '}
+            <Link to="/login" className="font-medium text-dc-blue hover:underline underline-offset-2">{t('nav.signIn')}</Link>
           </p>
         </div>
       </div>
     </div>
   )
 }
+

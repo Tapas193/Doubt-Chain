@@ -6,9 +6,11 @@ import ErrorState from '../components/ErrorState'
 import StatusBadge from '../components/StatusBadge'
 import { doubtService } from '../services/doubtService'
 import { Doubt, Subject, SmartDuplicateMatch } from '../types/api'
+import { useLanguage } from '../i18n/LanguageContext'
 
 export default function SearchBeforePost() {
   const navigate = useNavigate()
+  const { t } = useLanguage()
   const [query, setQuery] = useState('')
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [subjectId, setSubjectId] = useState('')
@@ -117,9 +119,9 @@ export default function SearchBeforePost() {
       <div className="mx-auto max-w-3xl space-y-6 animate-fade-in">
         {/* Header */}
         <div>
-          <h1 className="text-xl font-bold text-dc-text">Search Before Posting</h1>
+          <h1 className="text-xl font-bold text-dc-text">{t('search.title')}</h1>
           <p className="mt-0.5 text-sm text-dc-subtext">
-            Search existing doubts with AI duplicate detection before creating a new question.
+            {t('search.subtitle')}
           </p>
         </div>
 
@@ -142,8 +144,8 @@ export default function SearchBeforePost() {
                   setQuery(e.target.value)
                   setAnsweredDoubtId(null)
                 }}
-                placeholder="Type your question or concept to search…"
-                aria-label="Search existing doubts"
+                placeholder={t('search.inputPlaceholder')}
+                aria-label={t('search.title')}
                 className="dc-input pl-9"
                 autoFocus
               />
@@ -162,7 +164,7 @@ export default function SearchBeforePost() {
               aria-label="Filter by subject"
               className="dc-input w-auto flex-none"
             >
-              <option value="">All subjects</option>
+              <option value="">{t('common.all')} ({t('nav.subjects')})</option>
               {subjects.map(s => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -182,10 +184,10 @@ export default function SearchBeforePost() {
                 </span>
                 <div>
                   <h2 className="text-base font-semibold text-dc-text">
-                    Similar Doubts You May Have
+                    {t('search.smartMatches')}
                   </h2>
                   <p className="text-xs text-dc-subtext">
-                    AI-powered semantic matching found these existing resolved solutions
+                    {t('search.crossLanguageNotice')}
                   </p>
                 </div>
               </div>
@@ -224,7 +226,7 @@ export default function SearchBeforePost() {
                         </span>
                       )}
                       <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[11px] font-semibold text-emerald-400">
-                        {match.similarityPercent}% Match
+                        {match.similarityPercent}% {t('search.matchScore')}
                       </span>
                     </div>
                   </div>
@@ -233,9 +235,9 @@ export default function SearchBeforePost() {
                   {match.acceptedAnswer && (
                     <div className="mt-3 rounded-md bg-dc-card/90 p-2.5 border-l-2 border-emerald-400 text-xs">
                       <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-400 mb-1">
-                        <span>✓ Accepted Solution</span>
+                        <span>✓ {t('detail.acceptedSolution')}</span>
                         {match.acceptedAnswer.author && (
-                          <span className="text-dc-subtext">by {match.acceptedAnswer.author.displayName}</span>
+                          <span className="text-dc-subtext">({match.acceptedAnswer.author.displayName})</span>
                         )}
                       </div>
                       <p className="text-dc-text/90 line-clamp-2 italic">
@@ -249,7 +251,7 @@ export default function SearchBeforePost() {
                     {answeredDoubtId === match.id ? (
                       <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
                         <span>✓</span>
-                        <span>Awesome! Glad this resolved your doubt. Recorded.</span>
+                        <span>{t('common.success')}! Resolved.</span>
                       </div>
                     ) : (
                       <button
@@ -259,7 +261,7 @@ export default function SearchBeforePost() {
                         className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/25 transition-colors"
                       >
                         <span>💡</span>
-                        <span>This Answered My Doubt</span>
+                        <span>{t('detail.acceptedBadge')}</span>
                       </button>
                     )}
 
@@ -267,7 +269,7 @@ export default function SearchBeforePost() {
                       to={match.discussionUrl}
                       className="text-xs text-dc-blue hover:underline"
                     >
-                      View Full Discussion →
+                      {t('search.viewDiscussion')} →
                     </Link>
                   </div>
                 </div>
@@ -277,14 +279,14 @@ export default function SearchBeforePost() {
             {/* Action 2: "None of These Help — Post My Doubt" */}
             <div className="pt-2 flex items-center justify-between border-t border-dc-blue/20">
               <p className="text-xs text-dc-subtext">
-                Didn't find what you need in these similar answers?
+                {t('doubts.searchBeforePostNotice')}
               </p>
               <button
                 type="button"
                 onClick={handleNoneHelpedClick}
                 className="inline-flex items-center gap-2 rounded-lg bg-dc-blue px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-dc-blue/90 shadow transition-colors"
               >
-                <span>None of These Help — Post My Doubt</span>
+                <span>{t('doubts.askButton')}</span>
                 <span>→</span>
               </button>
             </div>
@@ -295,13 +297,13 @@ export default function SearchBeforePost() {
         <div className="dc-card p-5">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-dc-text">
-              {hasQuery ? `Matching Doubts (${results.length})` : 'Search Doubts'}
+              {hasQuery ? `${t('search.resultsCount')}: ${results.length}` : t('search.title')}
             </h2>
             <Link to="/doubts/new" className="dc-btn-primary text-sm">
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
-              Post New Doubt
+              {t('doubts.askButton')}
             </Link>
           </div>
 
@@ -313,27 +315,27 @@ export default function SearchBeforePost() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
-              <span>Searching doubts…</span>
+              <span>{t('search.searching')}</span>
             </div>
           )}
 
           {!hasQuery && !error && !loading && (
             <EmptyState
-              title="Start typing above"
-              description="We'll scan existing doubts with smart duplicate detection and show matches here."
+              title={t('search.title')}
+              description={t('search.subtitle')}
             />
           )}
 
           {hasQuery && !loading && !smartLoading && !error && results.length === 0 && smartMatches.length === 0 && (
             <EmptyState
-              title="No matches found"
-              description="No existing doubt matches your query. You're clear to post it as a new doubt."
+              title={t('search.noResults')}
+              description={t('doubts.searchBeforePostNotice')}
               action={
                 <Link
                   to={`/doubts/new?title=${encodeURIComponent(query)}&subjectId=${subjectId}`}
                   className="dc-btn-primary text-sm"
                 >
-                  Post a new doubt
+                  {t('doubts.askButton')}
                 </Link>
               }
             />
@@ -352,7 +354,7 @@ export default function SearchBeforePost() {
                       {d.title}
                     </p>
                     <p className="mt-0.5 text-xs text-dc-subtext truncate">
-                      {d.subject?.name} · {d._count?.answers ?? 0} answers
+                      {d.subject?.name} · {d._count?.answers ?? 0} {t('detail.replies')}
                     </p>
                   </div>
                   <StatusBadge status={d.isResolved ? 'resolved' : 'unresolved'} />
@@ -365,3 +367,4 @@ export default function SearchBeforePost() {
     </AppShell>
   )
 }
+

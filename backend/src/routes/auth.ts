@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { register, login, logout, me } from '../controllers/auth.controller.js'
+import { register, login, logout, me, updatePreferences } from '../controllers/auth.controller.js'
 import { validate } from '../middleware/validate.js'
 import { registerSchema, loginSchema } from '../validators/auth.js'
 import { requireAuth } from '../middleware/auth.js'
@@ -17,5 +17,7 @@ router.post('/register', authLimiter, validate(registerSchema), asyncWrap(regist
 router.post('/login', authLimiter, validate(loginSchema), asyncWrap(login))
 router.post('/logout', asyncWrap(logout))
 router.get('/me', requireAuth, asyncWrap(me))
+router.patch('/preferences', requireAuth, asyncWrap(updatePreferences))
 
 export default router
+

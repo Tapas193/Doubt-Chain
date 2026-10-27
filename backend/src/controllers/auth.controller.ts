@@ -1,9 +1,11 @@
 import { Request, Response } from 'express'
-import { registerUser, loginUser, getCurrentUser } from '../services/auth.service.js'
+import { registerUser, loginUser, getCurrentUser, updateLanguagePreference } from '../services/auth.service.js'
 import { signToken } from '../utils/jwt.js'
 import { ok } from '../utils/http.js'
 import { AuthRequest } from '../middleware/auth.js'
+import { HttpError } from '../middleware/errorHandler.js'
 import { env } from '../config/env.js'
+
 
 const isProd = env.NODE_ENV === 'production'
 
@@ -45,3 +47,14 @@ export async function me(req: AuthRequest, res: Response) {
   const user = await getCurrentUser(req.user!.userId)
   res.json(ok(user, 'Current user'))
 }
+
+export async function updatePreferences(req: AuthRequest, res: Response) {
+  const { preferredLanguage } = req.body
+  const allowed = ['en', 'hi', 'hinglish']
+  if (!preferredLanguage || !allowed.includes(preferredLanguage)) {
+    throw new HttpError(400, 'preferredLanguage must be one of: en, hi, hinglish')
+  }
+  const user = await updateLanguagePreference(req.user!.userId, preferredLanguage)
+  res.json(ok(user, 'Language preference updated'))
+}
+

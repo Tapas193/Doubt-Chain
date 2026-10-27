@@ -44,6 +44,7 @@ export async function registerUser(input: {
       fullName: true,
       profession: true,
       identificationNumber: true,
+      preferredLanguage: true,
       createdAt: true
     }
   })
@@ -67,7 +68,8 @@ export async function loginUser(input: { email: string; password: string }) {
     displayName: user.displayName,
     fullName: user.fullName,
     profession: user.profession,
-    identificationNumber: user.identificationNumber
+    identificationNumber: user.identificationNumber,
+    preferredLanguage: user.preferredLanguage || 'en'
   }
 }
 
@@ -82,6 +84,7 @@ export async function getCurrentUser(userId: string) {
       fullName: true,
       profession: true,
       identificationNumber: true,
+      preferredLanguage: true,
       createdAt: true
     }
   })
@@ -90,3 +93,23 @@ export async function getCurrentUser(userId: string) {
   }
   return user
 }
+
+export async function updateLanguagePreference(userId: string, preferredLanguage: string) {
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { preferredLanguage },
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      displayName: true,
+      fullName: true,
+      profession: true,
+      identificationNumber: true,
+      preferredLanguage: true,
+      createdAt: true
+    }
+  })
+  return user
+}
+

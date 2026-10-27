@@ -65,11 +65,136 @@ export function computeContentHash(pieces: (string | null | undefined)[]): strin
   return crypto.createHash('sha256').update(combined).digest('hex')
 }
 
+import { prisma } from '../config/prisma.js'
+
+export type SupportedLanguage = 'en' | 'hi' | 'hinglish'
+
+export interface TranslationResult {
+  translatedText: string
+  targetLang: SupportedLanguage
+  sourceLang: string
+  fromCache: boolean
+}
+
 /**
- * Extract text from an image attachment using Gemini Vision OCR.
- * Preserves original image and extracts readable text, code, or handwritten notes.
+ * Translate academic content between English, Hindi, and Hinglish with caching.
  */
-export async function extractTextFromImage(filePath: string, mimeType: string): Promise<string> {
+export async function translateContent(input: {
+  text: string
+  targetLang: SupportedLanguage
+}): Promise<TranslationResult> {
+  const cleanText = input.text.trim()
+  if (!cleanText) {
+    return {
+      translatedText: '',
+      targetLang: input.targetLang,
+      sourceLang: 'en',
+      fromCache: false
+    }
+  }
+
+  const sourceHash = crypto.createHash('sha256').update(cleanText).digest('hex')
+
+  // 1. Check cache first
+  const cached = await prisma.contentTranslation
+    .findUnique({
+      where: {
+        sourceHash_targetLang: {
+          sourceHash,
+          targetLang: input.targetLang
+        }
+      }
+    })
+    .catch(() => null)
+
+  if (cached) {
+    return {
+      translatedText: cached.translatedText,
+      targetLang: input.targetLang,
+      sourceLang: cached.sourceLang || 'unknown',
+      fromCache: true
+    }
+  }
+
+  // 2. Call Gemini
+  const ai = getAiClient()
+  if (!ai) {
+    throw new Error('Gemini AI client not available')
+  }
+
+  const prompt = `You are the Doubt-Chain academic translator for Indian university students.
+Translate the following academic doubt/answer text accurately into the requested target language.
+
+Target Language: ${input.targetLang}
+- If target is "hi": Translate into natural Hindi (Devanagari script). Preserve code blocks, math formulas, variable names, and core computer science / engineering terms (e.g., array, recursion, binary search, time complexity, API) in English/transliterated where natural.
+- If target is "hinglish": Translate into natural everyday conversational Hinglish using the Roman alphabet (e.g., "Binary search ki time complexity O(log n) hoti hai"). Preserve code, syntax, and technical terminology exactly.
+- If target is "en": Translate accurately into fluent, clear English.
+
+Rules:
+1. Preserve all markdown formatting, backticks, equations, and code blocks untouched.
+2. Return a JSON object with:
+   - "translatedText": the translated text
+   - "detectedSourceLang": detected source language (e.g. "en", "hi", "hinglish")
+3. Return ONLY valid JSON: {"translatedText": string, "detectedSourceLang": string}
+
+Original Text:
+${cleanText}`
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-3.5-flash-lite',
+    contents: prompt
+  })
+
+  const raw = response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
+  const jsonMatch = raw.match(/\{[\s\S]*\}/)
+  let translatedText = raw
+  let detectedSourceLang = 'unknown'
+
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0])
+      if (parsed.translatedText) {
+        translatedText = parsed.translatedText
+        detectedSourceLang = parsed.detectedSourceLang || 'unknown'
+      }
+    } catch {
+      // fallback to raw text
+    }
+  }
+
+  // 3. Cache translation in DB
+  await prisma.contentTranslation
+    .upsert({
+      where: {
+        sourceHash_targetLang: {
+          sourceHash,
+          targetLang: input.targetLang
+        }
+      },
+      create: {
+        sourceHash,
+        targetLang: input.targetLang,
+        sourceLang: detectedSourceLang,
+        translatedText
+      },
+      update: {
+        translatedText
+      }
+    })
+    .catch(() => {})
+
+  return {
+    translatedText,
+    targetLang: input.targetLang,
+    sourceLang: detectedSourceLang,
+    fromCache: false
+  }
+}
+
+/**
+ * Extract text from an image attachment using Gemini Vision OCR with language detection.
+ */
+export async function extractTextFromImage(filePath: string, mimeType: string): Promise<any> {
   const ai = getAiClient()
   if (!ai) return ''
 
@@ -87,15 +212,20 @@ export async function extractTextFromImage(filePath: string, mimeType: string): 
             data: base64Data
           }
         },
-        'Extract all readable text, source code, math equations, or handwritten notes visible in this image. Output only the extracted text accurately. If there is no readable text, output [NO_TEXT].'
+        'Extract all readable text, source code, math equations, or handwritten notes visible in this image. Detect if the text is in English (en), Hindi (hi), or Hinglish (hinglish). If text exists, start the first line with [LANG:en|hi|hinglish] followed by the extracted text on subsequent lines. If there is no readable text, output [NO_TEXT].'
       ]
     })
 
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
-    if (text.includes('[NO_TEXT]')) {
+    const raw = response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
+    if (raw.includes('[NO_TEXT]')) {
       return ''
     }
-    return text
+
+    const langMatch = raw.match(/^\[LANG:([a-z]+)\]\s*\n?/)
+    const detectedLanguage = langMatch ? langMatch[1] : null
+    const extractedText = raw.replace(/^\[LANG:[a-z]+\]\s*\n?/, '').trim()
+
+    return Object.assign(new String(extractedText), { extractedText, detectedLanguage })
   } catch (err: any) {
     console.warn('[AI OCR] Vision text extraction failed:', err?.message || err)
     return ''
@@ -103,9 +233,9 @@ export async function extractTextFromImage(filePath: string, mimeType: string): 
 }
 
 /**
- * Transcribe speech from an audio attachment (supports English, Hindi, Hinglish).
+ * Transcribe speech from an audio attachment (supports English, Hindi, Hinglish) with language detection.
  */
-export async function transcribeAudio(filePath: string, mimeType: string): Promise<string> {
+export async function transcribeAudio(filePath: string, mimeType: string): Promise<any> {
   const ai = getAiClient()
   if (!ai) return ''
 
@@ -123,15 +253,20 @@ export async function transcribeAudio(filePath: string, mimeType: string): Promi
             data: base64Data
           }
         },
-        'Transcribe this audio recording accurately. If speech is spoken in Hindi, English, or Hinglish, output the exact words in Roman/English script as spoken. If the audio is silent or contains no speech, output [NO_SPEECH].'
+        'Transcribe this audio recording accurately. Accurately transcribe Hindi, English, or conversational Hinglish speech. If speech is present, start the first line with [LANG:en|hi|hinglish] followed by the exact words spoken on subsequent lines. If silent or no speech, output [NO_SPEECH].'
       ]
     })
 
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
-    if (text.includes('[NO_SPEECH]')) {
+    const raw = response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
+    if (raw.includes('[NO_SPEECH]')) {
       return ''
     }
-    return text
+
+    const langMatch = raw.match(/^\[LANG:([a-z]+)\]\s*\n?/)
+    const detectedLanguage = langMatch ? langMatch[1] : null
+    const transcript = raw.replace(/^\[LANG:[a-z]+\]\s*\n?/, '').trim()
+
+    return Object.assign(new String(transcript), { transcript, extractedText: transcript, detectedLanguage })
   } catch (err: any) {
     console.warn('[AI Transcription] Audio transcription failed:', err?.message || err)
     return ''

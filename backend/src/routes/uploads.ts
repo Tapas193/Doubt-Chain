@@ -143,16 +143,19 @@ router.post(
     const fileType = isImage ? 'IMAGE' : 'AUDIO'
 
     let extractedText: string | null = null
+    let detectedLanguage: string | null = null
     let processingStatus: 'COMPLETED' | 'FAILED' = 'COMPLETED'
     let processingError: string | null = null
 
     try {
       if (isImage) {
         const ocr = await extractTextFromImage(req.file.path, mime)
-        extractedText = ocr || null
+        extractedText = typeof ocr === 'string' ? (ocr || null) : (ocr?.extractedText || null)
+        detectedLanguage = (ocr as any)?.detectedLanguage || null
       } else {
         const transcript = await transcribeAudio(req.file.path, mime)
-        extractedText = transcript || null
+        extractedText = typeof transcript === 'string' ? (transcript || null) : (transcript?.extractedText || transcript?.transcript || null)
+        detectedLanguage = (transcript as any)?.detectedLanguage || null
       }
     } catch (err: any) {
       processingStatus = 'FAILED'
@@ -170,6 +173,7 @@ router.post(
           mimeType: req.file.mimetype,
           size: req.file.size,
           extractedText,
+          detectedLanguage,
           processingStatus,
           processingError
         },
@@ -180,3 +184,4 @@ router.post(
 )
 
 export default router
+

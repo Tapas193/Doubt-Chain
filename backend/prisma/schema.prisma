@@ -25,6 +25,7 @@ model User {
   profession            Profession?
   identificationNumber  String?
   passwordHash          String
+  preferredLanguage     String?    @default("en")
   createdAt             DateTime   @default(now())
   updatedAt             DateTime   @updatedAt
 
@@ -170,6 +171,7 @@ model Attachment {
   mimeType         String
   size             Int
   extractedText    String?
+  detectedLanguage String?
   processingStatus ProcessingStatus @default(COMPLETED)
   processingError  String?
   createdAt        DateTime         @default(now())
@@ -213,6 +215,18 @@ model SearchFeedback {
   @@unique([userId, doubtId, action, query])
   @@index([userId])
   @@index([doubtId])
+}
+
+model ContentTranslation {
+  id             String   @id @default(cuid())
+  sourceHash     String
+  targetLang     String
+  sourceLang     String?
+  translatedText String
+  createdAt      DateTime @default(now())
+
+  @@unique([sourceHash, targetLang])
+  @@index([sourceHash])
 }
 
 enum MediaType {

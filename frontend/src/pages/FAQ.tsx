@@ -6,6 +6,8 @@ import { SkeletonCard } from '../components/LoadingState'
 import ErrorState from '../components/ErrorState'
 import { doubtService } from '../services/doubtService'
 import { Doubt, Subject } from '../types/api'
+import { useLanguage } from '../i18n/LanguageContext'
+import ContentTranslationControl from '../components/ContentTranslationControl'
 
 function formatDate(iso?: string | null) {
   if (!iso) return ''
@@ -17,7 +19,9 @@ function formatDate(iso?: string | null) {
 }
 
 export default function FAQ() {
+  const { t } = useLanguage()
   const [items, setItems] = useState<Doubt[]>([])
+
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [subjectId, setSubjectId] = useState('')
   const [q, setQ] = useState('')
@@ -66,14 +70,14 @@ export default function FAQ() {
         <div>
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">
-              Verified Knowledge Base
+              {t('faq.verifiedSolutions')}
             </span>
           </div>
           <h1 className="mt-2 text-2xl font-bold tracking-tight text-dc-text">
-            Searchable FAQ & Verified Answers
+            {t('faq.title')}
           </h1>
           <p className="mt-1 text-sm text-dc-subtext">
-            Every resolved academic doubt with an accepted best answer becomes permanent, searchable institutional knowledge.
+            {t('faq.subtitle')}
           </p>
         </div>
 
@@ -96,8 +100,8 @@ export default function FAQ() {
                 setQ(e.target.value)
                 setPage(1)
               }}
-              placeholder="Search resolved doubts and solutions…"
-              aria-label="Search FAQ"
+              placeholder={t('faq.searchPlaceholder')}
+              aria-label={t('faq.searchPlaceholder')}
               className="dc-input pl-9 text-xs"
             />
             {q && (
@@ -118,10 +122,10 @@ export default function FAQ() {
               setSubjectId(e.target.value)
               setPage(1)
             }}
-            aria-label="Filter by subject"
+            aria-label={t('doubts.subjectLabel')}
             className="dc-input w-auto flex-none text-xs"
           >
-            <option value="">All Subject Boards</option>
+            <option value="">{t('common.all')} ({t('nav.subjects')})</option>
             {subjects.map(s => (
               <option key={s.id} value={s.id}>
                 {s.name} ({s.code})
@@ -139,10 +143,11 @@ export default function FAQ() {
             aria-label="Sort FAQ"
             className="dc-input w-auto flex-none text-xs"
           >
-            <option value="recent">Most Recently Resolved</option>
-            <option value="popular">Most Relevant</option>
+            <option value="recent">{t('doubts.sortByNewest')}</option>
+            <option value="popular">{t('doubts.sortByUpvotes')}</option>
           </select>
         </div>
+
 
         {/* Counter */}
         {!loading && (
@@ -217,10 +222,7 @@ export default function FAQ() {
                   <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/5 p-3.5 space-y-2">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-indigo-300 flex items-center gap-1.5">
-                        <span>✨</span> AI Concise Summary:
-                      </span>
-                      <span className="text-[10px] text-indigo-400 font-mono">
-                        Instant Answer
+                        <span>✨</span> {t('faq.aiGeneratedNotice')}:
                       </span>
                     </div>
                     <div className="space-y-1">
@@ -230,6 +232,10 @@ export default function FAQ() {
                       <p className="text-xs leading-relaxed text-dc-subtext line-clamp-3">
                         {d.aiAnswer}
                       </p>
+                      <ContentTranslationControl
+                        originalText={`${d.aiQuestion}\n\n${d.aiAnswer}`}
+                        label={t('faq.translateFaq')}
+                      />
                     </div>
                     {d.aiTags && d.aiTags.length > 0 && (
                       <div className="flex flex-wrap items-center gap-1.5 pt-1">
@@ -259,7 +265,7 @@ export default function FAQ() {
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        Original Accepted Best Answer:
+                        {t('detail.acceptedSolution')}:
                       </span>
                       {d.acceptedAnswer.author && (
                         <span className="text-dc-subtext text-[11px]">
@@ -270,21 +276,26 @@ export default function FAQ() {
                     <p className="text-xs leading-relaxed text-dc-text line-clamp-3 whitespace-pre-wrap">
                       {d.acceptedAnswer.content}
                     </p>
+                    <ContentTranslationControl
+                      originalText={d.acceptedAnswer.content}
+                      label={t('detail.translateAnswer')}
+                    />
                   </div>
                 )}
 
                 {/* Card Footer */}
                 <div className="flex items-center justify-between border-t border-dc-border/60 pt-3 text-xs text-dc-subtext">
                   <span>
-                    Asked by <strong className="text-dc-text">{d.author?.displayName ?? 'Student'}</strong>
+                    {t('detail.askedBy')} <strong className="text-dc-text">{d.author?.displayName ?? 'Student'}</strong>
                   </span>
                   <Link
                     to={`/doubts/${d.id}`}
                     className="font-medium text-dc-blue hover:underline underline-offset-2"
                   >
-                    View Full Discussion & Thread →
+                    {t('faq.readFullDiscussion')} →
                   </Link>
                 </div>
+
               </article>
             ))}
           </div>

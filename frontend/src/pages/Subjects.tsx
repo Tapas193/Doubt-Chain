@@ -8,9 +8,11 @@ import ErrorState from '../components/ErrorState'
 import { doubtService } from '../services/doubtService'
 import { Subject } from '../types/api'
 import { useAuth } from '../context/AuthContext'
+import { useLanguage } from '../i18n/LanguageContext'
 
 export default function Subjects() {
   const { user } = useAuth()
+  const { t } = useLanguage()
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -46,11 +48,11 @@ export default function Subjects() {
     setJoinSuccess(null)
     try {
       const res = await doubtService.joinSubjectByCode(joinCode.trim())
-      setJoinSuccess(`Successfully joined ${res.name} (${res.code})!`)
+      setJoinSuccess(`${t('subjects.joinSuccess')} ${res.name} (${res.code})`)
       setJoinCode('')
       load()
     } catch (err: any) {
-      setJoinError(err.message || 'Invalid or expired join code')
+      setJoinError(err.message || t('subjects.invalidCode'))
     } finally {
       setJoining(false)
     }
@@ -62,9 +64,9 @@ export default function Subjects() {
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-dc-text">Subject Boards</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-dc-text">{t('subjects.title')}</h1>
             <p className="mt-1 text-sm text-dc-subtext">
-              Browse subject boards, join with a code, and view doubts specific to your courses.
+              {t('subjects.subtitle')}
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5">
@@ -75,13 +77,13 @@ export default function Subjects() {
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
               </svg>
-              Join Using Code
+              {t('subjects.joinSubject')}
             </button>
             <Link to="/doubts/new" className="dc-btn-primary text-xs">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
-              Ask a Doubt
+              {t('doubts.askButton')}
             </Link>
           </div>
         </div>
@@ -91,16 +93,16 @@ export default function Subjects() {
           <div className="rounded-xl border border-dc-blue/40 bg-dc-card p-5 shadow-lg space-y-3 animate-fade-in">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-dc-text">Join a Board Using Secret Code</h2>
+                <h2 className="text-sm font-semibold text-dc-text">{t('subjects.enterCode')}</h2>
                 <p className="text-xs text-dc-subtext">
-                  Enter the course join code (e.g., <code className="text-dc-blue">DS-201</code>, <code className="text-dc-blue">OOP-202</code>, or course code) provided by your professor or peer.
+                  {t('subjects.subtitle')}
                 </p>
               </div>
               <button
                 onClick={() => setShowCodeDialog(false)}
                 className="text-xs text-dc-subtext hover:text-dc-text"
               >
-                ✕ Close
+                ✕ {t('common.close')}
               </button>
             </div>
 
@@ -109,7 +111,7 @@ export default function Subjects() {
                 <input
                   value={joinCode}
                   onChange={e => setJoinCode(e.target.value)}
-                  placeholder="Enter join code (e.g. DS-201)"
+                  placeholder={t('subjects.codePlaceholder')}
                   aria-label="Subject join code"
                   className="dc-input flex-1 min-w-[200px]"
                   autoFocus
@@ -119,12 +121,12 @@ export default function Subjects() {
                   disabled={joining || !joinCode.trim()}
                   className="dc-btn-primary shrink-0"
                 >
-                  {joining ? 'Joining…' : 'Join Board'}
+                  {joining ? t('subjects.joining') : t('subjects.joinSubject')}
                 </button>
               </form>
             ) : (
               <p className="text-xs text-amber-300">
-                Please <Link to="/login" className="underline font-semibold">sign in</Link> first to join subject boards.
+                Please <Link to="/login" className="underline font-semibold">{t('nav.signIn')}</Link> {t('subjects.joinToParticipate').toLowerCase()}
               </p>
             )}
 
@@ -149,8 +151,8 @@ export default function Subjects() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search subjects by name, course code, or description…"
-            aria-label="Search subjects"
+            placeholder={t('subjects.searchPlaceholder')}
+            aria-label={t('subjects.searchPlaceholder')}
             className="dc-input pl-10"
           />
           {search && (
@@ -158,7 +160,7 @@ export default function Subjects() {
               onClick={() => setSearch('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-dc-subtext hover:text-dc-text"
             >
-              Clear
+              ✕
             </button>
           )}
         </div>
@@ -173,8 +175,8 @@ export default function Subjects() {
           </div>
         ) : subjects.length === 0 ? (
           <EmptyState
-            title="No subjects match your query"
-            description="Try searching with different terms or join using a specific code."
+            title={t('subjects.noSubjectsFound')}
+            description={t('subjects.subtitle')}
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -196,3 +198,4 @@ export default function Subjects() {
     </AppShell>
   )
 }
+

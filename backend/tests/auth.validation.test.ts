@@ -35,15 +35,15 @@ describe('Auth validation', () => {
       id: 'test-id',
       email: 'jane.unique.test@example.com',
       username: 'janedoe1234',
-      displayName: 'Jane Doe',
-      fullName: 'Jane Doe',
+      displayName: 'Your Name',
+      fullName: 'Your Name',
       profession: 'STUDENT',
       identificationNumber: 'ID123456',
       createdAt: new Date().toISOString()
     } as any)
 
     const res = await request(app).post('/api/v1/auth/register').send({
-      fullName: 'Jane Doe',
+      fullName: 'Your Name',
       profession: 'STUDENT',
       identificationNumber: 'ID123456',
       email: 'jane.unique.test@example.com',

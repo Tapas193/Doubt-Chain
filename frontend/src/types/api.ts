@@ -13,6 +13,7 @@ export type User = {
   fullName?: string | null
   profession?: 'STUDENT' | 'PROFESSOR' | 'CORPORATE_WORKER' | null
   identificationNumber?: string | null
+  preferredLanguage?: string | null
   createdAt: string
 }
 
@@ -44,6 +45,7 @@ export type Attachment = {
   mimeType: string
   size: number
   extractedText?: string | null
+  detectedLanguage?: string | null
   processingStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
   processingError?: string | null
   createdAt?: string

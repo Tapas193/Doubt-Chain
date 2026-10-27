@@ -7,6 +7,8 @@ import ErrorState from '../components/ErrorState'
 import { doubtService } from '../services/doubtService'
 import { Doubt, Answer } from '../types/api'
 import { useAuth } from '../context/AuthContext'
+import { useLanguage } from '../i18n/LanguageContext'
+import ContentTranslationControl from '../components/ContentTranslationControl'
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-IN', {
@@ -21,10 +23,12 @@ function formatDate(iso: string) {
 export default function DoubtDetail() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
+  const { t } = useLanguage()
   const [doubt, setDoubt] = useState<Doubt | null>(null)
   const [answers, setAnswers] = useState<Answer[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
 
   // Primary answer form
   const [content, setContent] = useState('')
@@ -253,7 +257,7 @@ export default function DoubtDetail() {
           {isAccepted ? (
             <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 px-3 py-1 text-xs font-semibold text-emerald-300">
               <span>✓</span>
-              <span>Best Answer / Accepted Solution</span>
+              <span>{t('detail.acceptedSolution')}</span>
             </div>
           ) : isOwner && !doubt?.isResolved && !isReply ? (
             <button
@@ -262,9 +266,10 @@ export default function DoubtDetail() {
               disabled={actionId === `accept-${ans.id}`}
               className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50 transition-colors"
             >
-              {actionId === `accept-${ans.id}` ? 'Marking…' : '★ Mark as Best Answer'}
+              {actionId === `accept-${ans.id}` ? `${t('detail.markAccepted')}…` : `★ ${t('detail.markAccepted')}`}
             </button>
           ) : <span />}
+
 
           <span className="text-[11px] text-dc-subtext">
             {formatDate(ans.createdAt)}
@@ -286,7 +291,7 @@ export default function DoubtDetail() {
                 className="dc-btn-secondary text-xs"
                 onClick={() => setEditingAnswerId(null)}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -294,15 +299,19 @@ export default function DoubtDetail() {
                 disabled={actionId === `edit-answer-${ans.id}`}
                 onClick={() => saveAnswer(ans.id)}
               >
-                {actionId === `edit-answer-${ans.id}` ? 'Saving…' : 'Save'}
+                {actionId === `edit-answer-${ans.id}` ? `${t('common.save')}…` : t('common.save')}
               </button>
             </div>
           </div>
         ) : (
-          <p className="text-sm leading-relaxed whitespace-pre-wrap text-dc-text">
-            {ans.content}
-          </p>
+          <>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap text-dc-text">
+              {ans.content}
+            </p>
+            <ContentTranslationControl originalText={ans.content} label={t('detail.translateAnswer')} />
+          </>
         )}
+
 
         {/* Footer controls: Author, Upvote, Reply, Edit, Delete */}
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-dc-border/60 pt-3 text-xs text-dc-subtext">
@@ -540,8 +549,13 @@ export default function DoubtDetail() {
                   <p className="text-sm leading-relaxed text-dc-subtext whitespace-pre-wrap">
                     {doubt.content}
                   </p>
+                  <ContentTranslationControl
+                    originalText={`${doubt.title}\n\n${doubt.content}`}
+                    label={t('doubts.translateDoubt')}
+                  />
                 </>
               )}
+
 
               {/* Feature 2: Display Image Attachments */}
               {doubt.attachments && doubt.attachments.filter(a => a.fileType === 'IMAGE').length > 0 && (
@@ -714,7 +728,12 @@ export default function DoubtDetail() {
                   <p className="text-xs leading-relaxed text-dc-text/90 whitespace-pre-wrap bg-dc-bg/60 rounded-lg p-3 border border-dc-border/60">
                     {doubt.aiAnswer}
                   </p>
+                  <ContentTranslationControl
+                    originalText={`${doubt.aiQuestion}\n\n${doubt.aiAnswer}`}
+                    label={t('faq.translateFaq')}
+                  />
                 </div>
+
 
                 {doubt.aiTags && doubt.aiTags.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1.5 pt-1">
@@ -741,18 +760,18 @@ export default function DoubtDetail() {
             <section className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-dc-text">
-                  Answers ({answers.length})
+                  {t('detail.replies')} ({answers.length})
                 </h2>
                 {doubt.isResolved && (
                   <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-medium text-emerald-300">
-                    Resolved by accepted answer
+                    {t('detail.acceptedAnswerNotice')}
                   </span>
                 )}
               </div>
 
               {answers.length === 0 ? (
                 <div className="dc-card px-5 py-10 text-center text-sm text-dc-subtext shadow-dc-card">
-                  No answers yet. Be the first to help your peer!
+                  {t('detail.noAnswersYet')} {t('detail.beFirstToAnswer')}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -763,7 +782,7 @@ export default function DoubtDetail() {
 
             {/* Post Answer Form */}
             <section className="dc-card p-6 shadow-dc-card">
-              <h3 className="mb-3 text-sm font-semibold text-dc-text">Post Your Answer</h3>
+              <h3 className="mb-3 text-sm font-semibold text-dc-text">{t('detail.addAnswer')}</h3>
               {user && !doubt.isResolved ? (
                 <form onSubmit={submitAnswer} className="space-y-3">
                   <textarea
@@ -771,9 +790,9 @@ export default function DoubtDetail() {
                     onChange={e => setContent(e.target.value)}
                     required
                     rows={5}
-                    placeholder="Provide a clear, detailed, step-by-step solution or explanation…"
+                    placeholder={t('detail.answerPlaceholder')}
                     className="dc-input resize-none"
-                    aria-label="Your answer"
+                    aria-label={t('detail.addAnswer')}
                   />
                   <div className="flex justify-end">
                     <button
@@ -781,24 +800,25 @@ export default function DoubtDetail() {
                       disabled={submitting || !content.trim()}
                       className="dc-btn-primary"
                     >
-                      {submitting ? 'Posting Answer…' : 'Submit Answer'}
+                      {submitting ? t('detail.postingAnswer') : t('detail.submitAnswer')}
                     </button>
                   </div>
                 </form>
               ) : doubt.isResolved ? (
                 <p className="text-xs text-dc-subtext">
-                  This doubt has been marked as resolved with an accepted answer. The author can reopen it if further questions arise.
+                  {t('detail.acceptedAnswerNotice')}
                 </p>
               ) : (
                 <p className="text-xs text-dc-subtext">
                   Please{' '}
                   <Link to="/login" className="text-dc-blue hover:underline">
-                    sign in
+                    {t('nav.signIn')}
                   </Link>{' '}
-                  to post an answer.
+                  {t('detail.addAnswer').toLowerCase()}.
                 </p>
               )}
             </section>
+
           </>
         )}
       </div>

@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useLanguage } from '../i18n/LanguageContext'
+import LanguageSelector from '../components/LanguageSelector'
 
 export default function Login() {
   const { login } = useAuth()
+  const { t } = useLanguage()
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as any)?.from?.pathname || '/'
@@ -17,8 +20,8 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    if (!email.trim()) { setError('Email is required.'); return }
-    if (!password) { setError('Password is required.'); return }
+    if (!email.trim()) { setError(t('auth.fieldRequired')); return }
+    if (!password) { setError(t('auth.fieldRequired')); return }
     setLoading(true)
     try {
       await login(email.trim().toLowerCase(), password)
@@ -34,6 +37,11 @@ export default function Login() {
     <div className="relative flex min-h-screen items-center justify-center px-4 py-12">
       <div className="dc-grid-bg" aria-hidden="true" />
 
+      {/* Top right language selector */}
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageSelector />
+      </div>
+
       <div className="relative z-10 w-full max-w-[400px] animate-slide-up">
         {/* Brand */}
         <div className="mb-8 text-center">
@@ -41,8 +49,8 @@ export default function Login() {
             <span className="h-2.5 w-2.5 rounded-full bg-dc-red shadow-dc-red" />
             <span className="text-xs font-semibold tracking-[0.2em] text-dc-subtext uppercase">Doubt-Chain</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-dc-text">Welcome back</h1>
-          <p className="mt-1.5 text-sm text-dc-subtext">Sign in to your academic account</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-dc-text">{t('auth.loginTitle')}</h1>
+          <p className="mt-1.5 text-sm text-dc-subtext">{t('auth.loginSubtitle')}</p>
         </div>
 
         {/* Card */}
@@ -63,14 +71,14 @@ export default function Login() {
           <form onSubmit={handleSubmit} noValidate className="space-y-5">
             {/* Email */}
             <div>
-              <label htmlFor="email" className="dc-label">Organizational Email</label>
+              <label htmlFor="email" className="dc-label">{t('auth.emailLabel')}</label>
               <input
                 id="email"
                 type="email"
                 autoComplete="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="you@university.edu"
+                placeholder={t('auth.emailPlaceholder')}
                 required
                 className={`dc-input ${error && !email.trim() ? 'dc-input-error' : ''}`}
               />
@@ -78,7 +86,7 @@ export default function Login() {
 
             {/* Password */}
             <div>
-              <label htmlFor="password" className="dc-label">Password</label>
+              <label htmlFor="password" className="dc-label">{t('auth.passwordLabel')}</label>
               <div className="relative">
                 <input
                   id="password"
@@ -86,7 +94,7 @@ export default function Login() {
                   autoComplete="current-password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder={t('auth.passwordPlaceholder')}
                   required
                   className="dc-input pr-10"
                 />
@@ -122,16 +130,16 @@ export default function Login() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                   </svg>
-                  Signing in…
+                  {t('auth.loggingIn')}
                 </>
-              ) : 'Sign in'}
+              ) : t('nav.signIn')}
             </button>
           </form>
 
           <p className="mt-5 text-center text-sm text-dc-subtext">
-            No account?{' '}
+            {t('auth.noAccount')}{' '}
             <Link to="/register" className="font-medium text-dc-blue hover:underline underline-offset-2">
-              Create one
+              {t('auth.signUpPrompt')}
             </Link>
           </p>
         </div>
@@ -139,3 +147,4 @@ export default function Login() {
     </div>
   )
 }
+

@@ -47,5 +47,6 @@ Thumbs.db
 
 # Misc
 .cache
-cookies.txt
+uploads/
 backend/uploads/
+cookies.txt

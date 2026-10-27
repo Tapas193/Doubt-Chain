@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useLanguage } from '../i18n/LanguageContext'
 
 type SubjectCardProps = {
   id?: string
@@ -29,6 +30,7 @@ export default function SubjectCard({
   membersCount,
   isMember
 }: SubjectCardProps) {
+  const { t } = useLanguage()
   const idx = name.charCodeAt(0) % SUBJECT_COLORS.length
   const colorClass = SUBJECT_COLORS[idx]
 
@@ -50,7 +52,7 @@ export default function SubjectCard({
           </div>
           {isMember && (
             <span className="shrink-0 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2 py-0.5 text-[11px] font-medium text-emerald-300">
-              Joined
+              {t('subjects.joinedBadge')}
             </span>
           )}
         </div>
@@ -73,7 +75,7 @@ export default function SubjectCard({
           )}
         </div>
         <span className="font-medium text-dc-blue group-hover:underline underline-offset-2">
-          View Board →
+          {t('common.search')} →
         </span>
       </div>
     </article>

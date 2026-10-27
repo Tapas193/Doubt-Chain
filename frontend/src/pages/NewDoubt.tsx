@@ -5,6 +5,7 @@ import ProtectedRoute from '../components/ProtectedRoute'
 import ErrorState from '../components/ErrorState'
 import { doubtService } from '../services/doubtService'
 import { Subject, Doubt, Attachment, SmartDuplicateMatch } from '../types/api'
+import { useLanguage } from '../i18n/LanguageContext'
 
 function formatSeconds(secs: number) {
   const m = Math.floor(secs / 60)
@@ -14,6 +15,7 @@ function formatSeconds(secs: number) {
 
 function NewDoubtForm() {
   const navigate = useNavigate()
+  const { t } = useLanguage()
   const [searchParams] = useSearchParams()
   const preselectedSubjectId = searchParams.get('subjectId') || ''
 
@@ -23,6 +25,7 @@ function NewDoubtForm() {
     content: '',
     subjectId: preselectedSubjectId
   })
+
 
   // Feature 1 & 4: Smart duplicate detection and search-before-posting suggestions
   const [matches, setMatches] = useState<Doubt[]>([])
@@ -80,7 +83,7 @@ function NewDoubtForm() {
     setSearching(true)
     setSearchDismissed(false)
     setSearchError(null)
-    const t = setTimeout(() => {
+    const searchTimer = setTimeout(() => {
       doubtService
         .findSmartDuplicates(trimmed, {
           subjectId: form.subjectId || undefined
@@ -123,7 +126,7 @@ function NewDoubtForm() {
 
     return () => {
       active = false
-      clearTimeout(t)
+      clearTimeout(searchTimer)
     }
   }, [form.title, form.subjectId])
 
@@ -343,9 +346,9 @@ function NewDoubtForm() {
     <AppShell>
       <div className="mx-auto max-w-2xl space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-xl font-bold text-dc-text">Post an Academic Doubt</h1>
+          <h1 className="text-xl font-bold text-dc-text">{t('doubts.askButton')}</h1>
           <p className="mt-0.5 text-sm text-dc-subtext">
-            Ask with text, upload photos of diagrams, or record a voice note for your peers and professors.
+            {t('doubts.subtitle')}
           </p>
         </div>
 
@@ -355,7 +358,7 @@ function NewDoubtForm() {
           {/* Subject Board */}
           <div>
             <label htmlFor="subject" className="dc-label">
-              Subject Board <span className="text-rose-400">*</span>
+              {t('doubts.subjectLabel')} <span className="text-rose-400">*</span>
             </label>
             <select
               id="subject"
@@ -363,10 +366,10 @@ function NewDoubtForm() {
               onChange={set('subjectId')}
               className={`dc-input ${fieldErrors.subjectId ? 'dc-input-error' : ''}`}
             >
-              <option value="">Select a subject board</option>
+              <option value="">{t('doubts.selectSubject')}</option>
               {subjects.map(s => (
                 <option key={s.id} value={s.id}>
-                  {s.name} ({s.code}) {s.isMember ? '✓ Joined' : ''}
+                  {s.name} ({s.code}) {s.isMember ? `✓ ${t('subjects.joinedBadge')}` : ''}
                 </option>
               ))}
             </select>
@@ -381,7 +384,7 @@ function NewDoubtForm() {
           <div>
             <div className="flex items-center justify-between">
               <label htmlFor="title" className="dc-label">
-                Doubt Title <span className="text-rose-400">*</span>
+                {t('doubts.titleLabel')} <span className="text-rose-400">*</span>
               </label>
               <span className="text-xs text-dc-subtext">{form.title.length}/200</span>
             </div>
@@ -393,7 +396,7 @@ function NewDoubtForm() {
                 onChange={set('title')}
                 maxLength={200}
                 required
-                placeholder="What concept, problem, or topic are you stuck on?"
+                placeholder={t('doubts.titlePlaceholder')}
                 className={`dc-input pr-10 ${fieldErrors.title ? 'dc-input-error' : ''}`}
               />
               {searching && (
@@ -448,7 +451,7 @@ function NewDoubtForm() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm">✨</span>
                     <p className="text-xs font-semibold text-indigo-200">
-                      Smart Duplicate Matches Found — Check if already resolved:
+                      {t('doubts.smartDuplicateNotice')}
                     </p>
                   </div>
                   <button
@@ -456,7 +459,7 @@ function NewDoubtForm() {
                     onClick={() => setSearchDismissed(true)}
                     className="text-xs text-indigo-300 hover:text-white"
                   >
-                    ✕ Dismiss
+                    ✕ {t('common.close')}
                   </button>
                 </div>
 
@@ -476,13 +479,13 @@ function NewDoubtForm() {
                           {m.title} ↗
                         </Link>
                         <span className="shrink-0 rounded-full bg-indigo-500/20 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-mono font-semibold text-indigo-300">
-                          {m.similarityPercent}% Match
+                          {m.similarityPercent}% {t('search.matchScore')}
                         </span>
                       </div>
 
                       {m.acceptedAnswer && (
                         <div className="rounded bg-emerald-500/5 border-l-2 border-emerald-400 p-2 text-[11px] text-dc-subtext italic">
-                          <span className="text-emerald-400 font-medium not-italic">Accepted Answer: </span>
+                          <span className="text-emerald-400 font-medium not-italic">{t('detail.acceptedBadge')}: </span>
                           "{m.acceptedAnswer.content.slice(0, 140)}…"
                         </div>
                       )}
@@ -507,7 +510,7 @@ function NewDoubtForm() {
                           rel="noopener noreferrer"
                           className="text-[11px] text-dc-subtext hover:text-dc-blue"
                         >
-                          View discussion →
+                          {t('search.viewDiscussion')} →
                         </Link>
                       </div>
                     </div>
@@ -538,7 +541,7 @@ function NewDoubtForm() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm">💡</span>
                     <p className="text-xs font-semibold text-amber-200">
-                      Similar answered doubts found — save time if already solved:
+                      {t('search.similarQuestionsFound')}
                     </p>
                   </div>
                   <button
@@ -546,7 +549,7 @@ function NewDoubtForm() {
                     onClick={() => setSearchDismissed(true)}
                     className="text-xs text-amber-300 hover:text-white"
                   >
-                    ✕ Dismiss
+                    ✕ {t('common.close')}
                   </button>
                 </div>
 
@@ -568,7 +571,7 @@ function NewDoubtForm() {
                         </p>
                       </div>
                       <span className="shrink-0 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
-                        Resolved Solution ↗
+                        {t('detail.acceptedBadge')} ↗
                       </span>
                     </Link>
                   ))}
@@ -581,7 +584,7 @@ function NewDoubtForm() {
           <div>
             <div className="flex items-center justify-between">
               <label htmlFor="content" className="dc-label">
-                Detailed Explanation <span className="text-rose-400">*</span>
+                {t('doubts.contentLabel')} <span className="text-rose-400">*</span>
               </label>
               <span className="text-xs text-dc-subtext">{form.content.length}/10000</span>
             </div>
@@ -592,7 +595,7 @@ function NewDoubtForm() {
               required
               rows={6}
               maxLength={10000}
-              placeholder="Explain your doubt with context, what you have already tried, code snippets, or error traces."
+              placeholder={t('doubts.contentPlaceholder')}
               className={`dc-input resize-none ${fieldErrors.content ? 'dc-input-error' : ''}`}
             />
             {fieldErrors.content && (
@@ -606,16 +609,16 @@ function NewDoubtForm() {
           <div className="space-y-2 border-t border-dc-border pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <label className="dc-label mb-0">Photo Attachments (Optional)</label>
+                <label className="dc-label mb-0">{t('doubts.uploadImage')}</label>
                 <p className="text-xs text-dc-subtext">
-                  Upload images of problem statements, textbook pages, or handwritten work (JPEG, PNG, WebP up to 10MB).
+                  {t('doubts.mediaLabel')}
                 </p>
               </div>
               <label className="dc-btn-secondary cursor-pointer text-xs shrink-0">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                 </svg>
-                {uploadingFiles ? 'Uploading…' : 'Add Image'}
+                {uploadingFiles ? t('common.loading') : t('doubts.uploadImage')}
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
@@ -658,9 +661,9 @@ function NewDoubtForm() {
           {/* Feature 2: Voice Note Recording */}
           <div className="space-y-2 border-t border-dc-border pt-4">
             <div>
-              <label className="dc-label mb-0">Voice Note (Optional)</label>
+              <label className="dc-label mb-0">{t('doubts.recordVoice')}</label>
               <p className="text-xs text-dc-subtext">
-                Record your voice to describe your doubt verbally when typing is difficult.
+                {t('doubts.uploadVoice')}
               </p>
             </div>
 
@@ -677,7 +680,7 @@ function NewDoubtForm() {
                 className="dc-btn-secondary text-xs inline-flex items-center gap-2"
               >
                 <span className="h-2.5 w-2.5 rounded-full bg-dc-red" />
-                Start Recording Voice Note
+                {t('doubts.recordVoice')}
               </button>
             )}
 
@@ -688,7 +691,7 @@ function NewDoubtForm() {
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
                 </span>
                 <span className="font-mono text-rose-300 font-semibold">
-                  Recording: {formatSeconds(recordingDuration)} / 02:00
+                  {t('doubts.recording')} {formatSeconds(recordingDuration)} / 02:00
                 </span>
                 <div className="ml-auto flex items-center gap-2">
                   <button
@@ -696,14 +699,14 @@ function NewDoubtForm() {
                     onClick={stopRecording}
                     className="rounded bg-rose-600 px-3 py-1 font-medium text-white hover:bg-rose-500"
                   >
-                    Stop Recording
+                    {t('doubts.stopRecording')}
                   </button>
                   <button
                     type="button"
                     onClick={deleteRecording}
                     className="text-dc-subtext hover:text-white"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                 </div>
               </div>
@@ -712,7 +715,7 @@ function NewDoubtForm() {
             {voicePreviewUrl && !isRecording && (
               <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dc-border bg-dc-bg2/40 p-3 text-xs">
                 <div className="flex-1 min-w-[200px]">
-                  <p className="font-medium text-dc-text mb-1.5">Voice Note Preview:</p>
+                  <p className="font-medium text-dc-text mb-1.5">{t('doubts.recordVoice')}:</p>
                   <audio controls src={voicePreviewUrl} className="w-full h-8" />
                 </div>
                 <button
@@ -720,7 +723,7 @@ function NewDoubtForm() {
                   onClick={deleteRecording}
                   className="dc-btn-secondary text-xs text-rose-300 hover:text-rose-200"
                 >
-                  Delete Recording
+                  {t('common.delete')}
                 </button>
               </div>
             )}
@@ -729,7 +732,7 @@ function NewDoubtForm() {
           {/* Form Actions */}
           <div className="flex items-center justify-end gap-3 border-t border-dc-border pt-4">
             <Link to="/doubts" className="dc-btn-secondary text-xs">
-              Cancel
+              {t('common.cancel')}
             </Link>
             <button
               type="submit"
@@ -742,10 +745,10 @@ function NewDoubtForm() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                   </svg>
-                  Posting Doubt…
+                  {t('doubts.posting')}
                 </>
               ) : (
-                'Post Doubt'
+                t('doubts.postDoubt')
               )}
             </button>
           </div>
