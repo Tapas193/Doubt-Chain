@@ -39,6 +39,16 @@ const navLinks = [
       </svg>
     ),
   },
+  {
+    to: '/ai-assistant',
+    label: 'AI Assistant',
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v3m0 12v3m9-9h-3M6 12H3m12-3a3 3 0 11-6 0 3 3 0 016 0z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    ),
+  },
 ]
 
 export default function Sidebar() {
@@ -49,11 +59,16 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex h-14 items-center gap-2.5 border-b border-dc-border px-5">
         <span className="h-2 w-2 rounded-full bg-dc-red shadow-dc-red" />
-        <span className="text-sm font-semibold tracking-widest text-dc-text">DOUBT-CHAIN</span>
+        <span className="text-sm font-semibold tracking-widest text-dc-text">
+          DOUBT-CHAIN
+        </span>
       </div>
 
-      {/* Nav links */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Primary navigation">
+      {/* Navigation links */}
+      <nav
+        className="flex-1 overflow-y-auto px-3 py-4"
+        aria-label="Primary navigation"
+      >
         <div className="space-y-0.5">
           {navLinks.map(({ to, end, label, icon }) => (
             <NavLink
@@ -70,10 +85,18 @@ export default function Sidebar() {
             >
               {({ isActive }) => (
                 <>
-                  <span className={`transition-colors ${isActive ? 'text-dc-blue' : 'text-dc-subtext group-hover:text-dc-text'}`}>
+                  <span
+                    className={`transition-colors ${
+                      isActive
+                        ? 'text-dc-blue'
+                        : 'text-dc-subtext group-hover:text-dc-text'
+                    }`}
+                  >
                     {icon}
                   </span>
+
                   {label}
+
                   {isActive && (
                     <span className="ml-auto h-1.5 w-1.5 rounded-full bg-dc-blue" />
                   )}
@@ -84,35 +107,50 @@ export default function Sidebar() {
         </div>
       </nav>
 
-      {/* Ask CTA */}
+      {/* Ask a Doubt CTA */}
       <div className="border-t border-dc-border p-4">
-        <NavLink
-          to="/doubts/new"
-          className="dc-btn-primary w-full"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        <NavLink to="/doubts/new" className="dc-btn-primary w-full">
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 4.5v15m7.5-7.5h-15"
+            />
           </svg>
           Ask a Doubt
         </NavLink>
 
-        {/* User strip */}
+        {/* User section */}
         {user ? (
           <div className="mt-3 flex items-center justify-between">
             <div className="min-w-0">
-              <p className="truncate text-xs font-medium text-dc-text">{user.displayName}</p>
-              <p className="truncate text-xs text-dc-subtext">{user.profession?.toLowerCase()}</p>
+              <p className="truncate text-xs font-medium text-dc-text">
+                {user.displayName}
+              </p>
+              <p className="truncate text-xs text-dc-subtext">
+                {user.profession?.toLowerCase()}
+              </p>
             </div>
+
             <button
               onClick={() => logout()}
-              className="ml-2 shrink-0 text-xs text-dc-subtext hover:text-dc-red transition-colors"
+              className="ml-2 shrink-0 text-xs text-dc-subtext transition-colors hover:text-dc-red"
               aria-label="Logout"
             >
               Sign out
             </button>
           </div>
         ) : (
-          <NavLink to="/login" className="mt-3 block text-center text-xs text-dc-blue hover:underline underline-offset-2">
+          <NavLink
+            to="/login"
+            className="mt-3 block text-center text-xs text-dc-blue underline-offset-2 hover:underline"
+          >
             Sign in
           </NavLink>
         )}

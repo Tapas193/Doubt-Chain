@@ -1,5 +1,5 @@
 import { Response } from 'express'
-import { createAnswer, listAnswers, updateAnswer, deleteAnswer, upvoteAnswer, removeUpvote } from '../services/answer.service.js'
+import { createAnswer, listAnswers, updateAnswer, deleteAnswer, upvoteAnswer, removeUpvote, removeAnswerVote, setAnswerVote } from '../services/answer.service.js'
 import { ok } from '../utils/http.js'
 import { AuthRequest } from '../middleware/auth.js'
 
@@ -13,7 +13,7 @@ export async function create(req: AuthRequest, res: Response) {
 }
 
 export async function list(req: AuthRequest, res: Response) {
-  const answers = await listAnswers(req.params.id)
+  const answers = await listAnswers(req.params.id, req.user?.userId)
   res.json(ok(answers))
 }
 
@@ -35,4 +35,14 @@ export async function upvote(req: AuthRequest, res: Response) {
 export async function downvote(req: AuthRequest, res: Response) {
   const answer = await removeUpvote(req.params.answerId, req.user!.userId)
   res.json(ok(answer, 'Upvote removed'))
+}
+
+export async function vote(req: AuthRequest, res: Response) {
+  const answer = await setAnswerVote(req.params.answerId, req.user!.userId, req.body.value)
+  res.json(ok(answer, 'Vote updated'))
+}
+
+export async function removeVote(req: AuthRequest, res: Response) {
+  const answer = await removeAnswerVote(req.params.answerId, req.user!.userId)
+  res.json(ok(answer, 'Vote removed'))
 }

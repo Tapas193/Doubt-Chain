@@ -31,6 +31,7 @@ model User {
   doubts   Doubt[]
   answers  Answer[]
   upvotes  AnswerUpvote[]
+  comments AnswerComment[]
 
   @@index([profession])
 }
@@ -63,7 +64,9 @@ model Doubt {
   subjectId String
   subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
 
-  answers Answer[]
+  answers          Answer[] @relation("DoubtAnswers")
+  acceptedAnswerId String?   @unique
+  acceptedAnswer   Answer?   @relation("AcceptedAnswer", fields: [acceptedAnswerId], references: [id], onDelete: SetNull)
 
   @@index([subjectId, isResolved, createdAt])
   @@index([authorId])
@@ -74,16 +77,19 @@ model Answer {
   content   String
   mediaUrl  String?
   mediaType MediaType?
+  isDeleted Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   authorId String
   author   User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
 
-  doubtId String
-  doubt   Doubt  @relation(fields: [doubtId], references: [id], onDelete: Cascade)
+  doubtId     String
+  doubt       Doubt  @relation("DoubtAnswers", fields: [doubtId], references: [id], onDelete: Cascade)
+  acceptedBy  Doubt? @relation("AcceptedAnswer")
 
   upvotes AnswerUpvote[]
+  comments AnswerComment[]
 
   @@index([doubtId, createdAt])
   @@index([authorId])
@@ -91,6 +97,7 @@ model Answer {
 
 model AnswerUpvote {
   id        String   @id @default(cuid())
+  value     Int      @default(1)
   createdAt DateTime @default(now())
 
   userId String
@@ -101,6 +108,23 @@ model AnswerUpvote {
 
   @@unique([userId, answerId])
   @@index([answerId])
+}
+
+model AnswerComment {
+  id        String   @id @default(cuid())
+  content   String
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  answerId String
+  answer   Answer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@index([answerId, createdAt])
+  @@index([authorId])
 }
 
 enum MediaType {

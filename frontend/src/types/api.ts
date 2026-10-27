@@ -45,6 +45,8 @@ export type Doubt = {
   subjectId: string
   author?: Author
   subject?: Subject
+  acceptedAnswerId?: string | null
+  acceptedAnswer?: Pick<Answer, 'id' | 'content' | 'authorId' | 'createdAt'> | null
   _count?: { answers: number }
   answers?: Answer[]
 }
@@ -60,6 +62,24 @@ export type Answer = {
   doubtId: string
   author?: Author
   _count?: { upvotes: number }
+  voteSummary?: VoteSummary
+}
+
+export type VoteSummary = {
+  upvotes: number
+  downvotes: number
+  viewerVote: -1 | 0 | 1
+}
+
+export type AnswerComment = {
+  id: string
+  content: string
+  isDeleted: boolean
+  createdAt: string
+  updatedAt: string
+  authorId: string
+  answerId: string
+  author?: Author
 }
 
 export type Paginated<T> = {

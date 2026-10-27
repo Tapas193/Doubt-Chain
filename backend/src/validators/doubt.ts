@@ -25,6 +25,24 @@ export const doubtParamsSchema = z.object({
   })
 })
 
+export const acceptDoubtSchema = z.object({
+  params: z.object({
+    id: z.string().min(1)
+  }),
+  body: z.object({
+    answerId: z.string().min(1)
+  })
+})
+
+export const resolveDoubtSchema = z.object({
+  params: z.object({
+    id: z.string().min(1)
+  }),
+  body: z.object({
+    answerId: z.string().min(1).optional()
+  }).default({})
+})
+
 export const updateDoubtSchema = z.object({
   params: z.object({
     id: z.string().min(1)
@@ -41,6 +59,7 @@ export const searchDoubtsQuerySchema = z.object({
   query: z.object({
     q: z.string().min(1),
     subjectId: z.string().optional(),
+    isResolved: z.enum(['true', 'false']).optional(),
     page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(50).optional()
   })

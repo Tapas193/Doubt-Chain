@@ -5,6 +5,8 @@ import {
   getDoubtById,
   updateDoubt,
   resolveDoubt,
+  acceptAnswer,
+  reopenDoubt,
   searchDoubts,
   listFaq
 } from '../services/doubt.service.js'
@@ -41,15 +43,26 @@ export async function update(req: AuthRequest, res: Response) {
 }
 
 export async function resolve(req: AuthRequest, res: Response) {
-  const doubt = await resolveDoubt(req.params.id, req.user!.userId)
+  const doubt = await resolveDoubt(req.params.id, req.user!.userId, req.body.answerId)
   res.json(ok(doubt, 'Doubt resolved'))
 }
 
+export async function accept(req: AuthRequest, res: Response) {
+  const doubt = await acceptAnswer(req.params.id, req.body.answerId, req.user!.userId)
+  res.json(ok(doubt, 'Answer accepted and doubt resolved'))
+}
+
+export async function reopen(req: AuthRequest, res: Response) {
+  const doubt = await reopenDoubt(req.params.id, req.user!.userId)
+  res.json(ok(doubt, 'Doubt reopened'))
+}
+
 export async function search(req: AuthRequest, res: Response) {
-  const { q, subjectId, page, limit } = req.query as any
+  const { q, subjectId, isResolved, page, limit } = req.query as any
   const result = await searchDoubts({
     q,
     subjectId,
+    isResolved: isResolved === 'true' ? true : isResolved === 'false' ? false : undefined,
     page: page ? Number(page) : undefined,
     limit: limit ? Number(limit) : undefined
   })

@@ -27,3 +27,12 @@ export const updateAnswerSchema = z.object({
     mediaType: z.enum(['IMAGE', 'AUDIO']).optional()
   })
 })
+
+export const voteAnswerSchema = z.object({
+  params: z.object({
+    answerId: z.string().min(1)
+  }),
+  body: z.object({
+    value: z.union([z.literal(1), z.literal(-1)])
+  })
+})

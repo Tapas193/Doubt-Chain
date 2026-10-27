@@ -28,7 +28,7 @@ function NewDoubtForm() {
     setSearching(true)
     const t = setTimeout(() => {
       doubtService
-        .searchDoubts(form.title.trim())
+        .searchDoubts(form.title.trim(), { isResolved: true })
         .then(res => { if (active) setMatches(res.items.slice(0, 5)) })
         .catch(() => { if (active) setMatches([]) })
         .finally(() => { if (active) setSearching(false) })

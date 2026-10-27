@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AppShell from '../layouts/AppShell'
 import EmptyState from '../components/EmptyState'
-import LoadingState, { SkeletonCard } from '../components/LoadingState'
 import ErrorState from '../components/ErrorState'
 import StatusBadge from '../components/StatusBadge'
 import { doubtService } from '../services/doubtService'
@@ -27,7 +26,7 @@ export default function SearchBeforePost() {
     setError(null)
     const t = setTimeout(() => {
       doubtService
-        .searchDoubts(query.trim(), subjectId ? { subjectId } : undefined)
+        .searchDoubts(query.trim(), { subjectId: subjectId || undefined, isResolved: true })
         .then(res => { if (active) setResults(res.items) })
         .catch(err => { if (active) setError(err.message) })
         .finally(() => { if (active) setLoading(false) })

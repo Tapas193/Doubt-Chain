@@ -15,6 +15,7 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@google/genai": "^2.31.0",
     "@prisma/client": "^5.19.1",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",

@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import Dashboard from './pages/Dashboard'
 import SearchBeforePost from './pages/SearchBeforePost'
+import AIAssistant from './pages/AIAssistant'
 import Discussions from './pages/Discussions'
 import DoubtDetail from './pages/DoubtDetail'
 import FAQ from './pages/FAQ'
@@ -14,6 +15,7 @@ function App() {
     <Routes>
       <Route path="/" element={<Dashboard />} />
       <Route path="/search" element={<SearchBeforePost />} />
+      <Route path="/ai-assistant" element={<AIAssistant />} />
       <Route path="/doubts" element={<Discussions />} />
       <Route path="/doubts/:id" element={<DoubtDetail />} />
       <Route path="/doubts/new" element={<NewDoubt />} />
