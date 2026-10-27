@@ -1,5 +1,5 @@
 import { api } from '../lib/apiClient'
-import { Doubt, Paginated, Subject, Answer, AnswerComment, Attachment, SmartDuplicateMatch } from '../types/api'
+import { Doubt, Paginated, Subject, Answer, AnswerComment, Attachment, SmartDuplicateMatch, AiAskResponse, AiConversation } from '../types/api'
 
 export const doubtService = {
   listSubjects: (params?: { q?: string }) => {
@@ -121,5 +121,24 @@ export const doubtService = {
     if (params?.limit) qs.set('limit', String(params.limit))
     const q = qs.toString()
     return api.get<Paginated<Doubt>>(`/faq${q ? `?${q}` : ''}`)
-  }
+  },
+  askStudyAssistant: (data: {
+    question: string
+    subject?: string
+    subjectId?: string
+    mode?: 'beginner' | 'step-by-step' | 'example' | 'hinglish' | 'debug'
+    conversationId?: string
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>
+    responseLanguage?: 'en' | 'hi' | 'hinglish'
+  }) => api.post<AiAskResponse>('/ai/ask', data),
+  listAiConversations: () => api.get<AiConversation[]>('/ai/conversations'),
+  getAiConversation: (id: string) => api.get<AiConversation>(`/ai/conversations/${id}`),
+  deleteAiConversation: (id: string) => api.delete<{ deleted: boolean }>(`/ai/conversations/${id}`),
+  submitAiFeedback: (data: { messageId: string; isHelpful: boolean }) =>
+    api.post<{ id: string; status: string }>('/ai/feedback', data),
+  submitAiReport: (data: {
+    messageId: string
+    reason: 'FACTUALLY_INCORRECT' | 'INCORRECT_CODE' | 'MISLEADING_EXPLANATION' | 'TRANSLATION_ISSUE' | 'OTHER'
+    details?: string
+  }) => api.post<{ id: string; status: string; message: string }>('/ai/report', data)
 }

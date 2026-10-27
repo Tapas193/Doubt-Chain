@@ -36,6 +36,9 @@ model User {
   subjectMemberships SubjectMember[]
   attachments Attachment[]
   searchFeedbacks SearchFeedback[]
+  aiConversations AiAssistantConversation[]
+  aiFeedbacks     AiResponseFeedback[]
+  aiReports       AiResponseReport[]
 
   @@index([profession])
 }
@@ -246,4 +249,60 @@ enum FeedbackAction {
   NONE_HELPED_POSTED
 }
 
+model AiAssistantConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  subjectId String?
+  language  String   @default("en")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  messages  AiAssistantMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model AiAssistantMessage {
+  id               String   @id @default(cuid())
+  conversationId   String
+  conversation     AiAssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role             String   // "user" | "assistant"
+  content          String
+  retrievedContext Json?
+  createdAt        DateTime @default(now())
+
+  feedback         AiResponseFeedback?
+  reports          AiResponseReport[]
+
+  @@index([conversationId, createdAt])
+}
+
+model AiResponseFeedback {
+  id        String   @id @default(cuid())
+  messageId String   @unique
+  message   AiAssistantMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isHelpful Boolean
+  createdAt DateTime @default(now())
+
+  @@unique([userId, messageId])
+  @@index([userId])
+}
+
+model AiResponseReport {
+  id        String   @id @default(cuid())
+  messageId String
+  message   AiAssistantMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason    String   // FACTUALLY_INCORRECT, INCORRECT_CODE, MISLEADING_EXPLANATION, TRANSLATION_ISSUE, OTHER
+  details   String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, messageId])
+  @@index([userId])
+  @@index([messageId])
+}

@@ -322,6 +322,73 @@ export async function reopenDoubt(id: string, userId: string) {
   })
 }
 
+function extractSnippet(text: string | null | undefined, query: string, maxLen = 160): string {
+  if (!text) return ''
+  const clean = text.replace(/[\r\n\t]+/g, ' ').trim()
+  if (clean.length <= maxLen) return clean
+
+  const lowerText = clean.toLowerCase()
+  const lowerQuery = query.toLowerCase().trim()
+  const idx = lowerText.indexOf(lowerQuery)
+
+  if (idx === -1) {
+    return clean.slice(0, maxLen).trim() + '…'
+  }
+
+  const start = Math.max(0, idx - 40)
+  const end = Math.min(clean.length, idx + maxLen - 40)
+  let snippet = clean.slice(start, end).trim()
+  if (start > 0) snippet = '…' + snippet
+  if (end < clean.length) snippet = snippet + '…'
+  return snippet
+}
+
+function computeKeywordScore(doubt: any, query: string): number {
+  const qLower = query.toLowerCase().trim()
+  const words = qLower.split(/\s+/).filter(w => w.length > 1)
+  if (words.length === 0) return 0.2
+
+  const titleLower = doubt.title.toLowerCase()
+  const contentLower = doubt.content.toLowerCase()
+  const answerLower = (doubt.acceptedAnswer?.content || '').toLowerCase()
+  const faqLower = (doubt.aiAnswer || '').toLowerCase()
+
+  let score = 0
+
+  // Title match
+  if (titleLower === qLower) {
+    score += 0.50
+  } else if (titleLower.includes(qLower)) {
+    score += 0.40
+  } else {
+    const titleMatched = words.filter(w => titleLower.includes(w)).length
+    score += (titleMatched / words.length) * 0.30
+  }
+
+  // Accepted Answer match
+  if (answerLower.includes(qLower)) {
+    score += 0.25
+  } else if (answerLower) {
+    const answerMatched = words.filter(w => answerLower.includes(w)).length
+    score += (answerMatched / words.length) * 0.15
+  }
+
+  // Content match
+  if (contentLower.includes(qLower)) {
+    score += 0.15
+  } else {
+    const contentMatched = words.filter(w => contentLower.includes(w)).length
+    score += (contentMatched / words.length) * 0.10
+  }
+
+  // FAQ match
+  if (faqLower.includes(qLower)) {
+    score += 0.10
+  }
+
+  return Math.min(1.0, score)
+}
+
 export async function searchDoubts(input: {
   q: string
   subjectId?: string
@@ -329,16 +396,30 @@ export async function searchDoubts(input: {
   page?: number
   limit?: number
 }) {
-  const page = input.page || 1
-  const limit = input.limit || 10
+  const page = Math.max(1, input.page || 1)
+  const limit = Math.min(50, Math.max(1, input.limit || 10))
   const skip = (page - 1) * limit
-  const query = input.q.trim()
+  const query = input.q?.trim() || ''
 
+  const where: any = {}
+  if (input.subjectId) where.subjectId = input.subjectId
+  if (typeof input.isResolved === 'boolean') where.isResolved = input.isResolved
+
+  // Empty query returns empty results immediately without database call
   if (!query) {
-    return { items: [], page, limit, total: 0, totalPages: 0 }
+    return {
+      items: [],
+      page,
+      limit,
+      total: 0,
+      totalPages: 0,
+      searchMode: 'none'
+    }
   }
 
-  const where: any = {
+  // Multi-field search predicate
+  const searchWhere: any = {
+    ...where,
     OR: [
       { title: { contains: query, mode: 'insensitive' } },
       { content: { contains: query, mode: 'insensitive' } },
@@ -348,21 +429,84 @@ export async function searchDoubts(input: {
       { acceptedAnswer: { content: { contains: query, mode: 'insensitive' } } }
     ]
   }
-  if (input.subjectId) where.subjectId = input.subjectId
-  if (typeof input.isResolved === 'boolean') where.isResolved = input.isResolved
 
-  const [items, total] = await Promise.all([
-    prisma.doubt.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: [{ isResolved: 'desc' }, { createdAt: 'desc' }],
-      include: doubtSummaryInclude
-    }),
-    prisma.doubt.count({ where })
-  ])
+  // 1. Fetch candidates for ranking
+  const candidates = await prisma.doubt.findMany({
+    where: searchWhere,
+    take: 100,
+    include: {
+      ...doubtSummaryInclude,
+      embedding: true
+    }
+  })
 
-  return { items, page, limit, total, totalPages: Math.ceil(total / limit) }
+  // 2. Generate query embedding with fallback
+  let queryEmbedding: number[] | null = null
+  try {
+    queryEmbedding = await generateEmbedding(query)
+  } catch (err) {
+    console.warn('[Smart Search] Embedding generation skipped:', err)
+  }
+
+  const isSemanticAvailable = queryEmbedding !== null && Array.isArray(queryEmbedding) && queryEmbedding.length === 3072
+
+  // 3. Deterministic relevance scoring
+  const scoredItems = candidates.map(doubt => {
+    const kwScore = computeKeywordScore(doubt, query)
+    let semSimilarity = 0
+    let matchType = 'keyword'
+
+    if (isSemanticAvailable && queryEmbedding && doubt.embedding?.vector && doubt.embedding.vector.length === queryEmbedding.length) {
+      semSimilarity = Math.max(0, cosineSimilarity(queryEmbedding, doubt.embedding.vector))
+      matchType = 'hybrid'
+    }
+
+    const acceptedBoost = doubt.acceptedAnswerId ? 0.08 : 0
+    const resolvedBoost = doubt.isResolved ? 0.05 : 0
+    const subjectBoost = input.subjectId && doubt.subjectId === input.subjectId ? 0.05 : 0
+
+    const totalScore = isSemanticAvailable && matchType === 'hybrid'
+      ? Math.min(1.0, 0.55 * semSimilarity + 0.35 * kwScore + acceptedBoost + resolvedBoost + subjectBoost)
+      : Math.min(1.0, kwScore + acceptedBoost + resolvedBoost + subjectBoost)
+
+    return {
+      doubt,
+      score: Number(totalScore.toFixed(3)),
+      semSimilarity: Number(semSimilarity.toFixed(3)),
+      matchType
+    }
+  })
+
+  // Sort by relevance score descending, then by creation date
+  scoredItems.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score
+    return new Date(b.doubt.createdAt).getTime() - new Date(a.doubt.createdAt).getTime()
+  })
+
+  const total = scoredItems.length
+  const paginated = scoredItems.slice(skip, skip + limit)
+
+  const items = paginated.map(({ doubt, score, semSimilarity, matchType }) => {
+    const { embedding, ...rest } = doubt as any
+    return {
+      ...rest,
+      relevanceScore: score,
+      semanticSimilarity: semSimilarity > 0 ? semSimilarity : undefined,
+      matchType,
+      contentSnippet: extractSnippet(doubt.content, query),
+      acceptedAnswerSnippet: doubt.acceptedAnswer ? extractSnippet(doubt.acceptedAnswer.content, query) : null,
+      faqSnippet: doubt.aiAnswer ? extractSnippet(doubt.aiAnswer, query) : null
+    }
+  })
+
+  return {
+    items,
+    page,
+    limit,
+    total,
+    totalPages: Math.ceil(total / limit),
+    searchMode: isSemanticAvailable ? 'hybrid' : 'keyword_fallback'
+  }
 }
 
 export async function findSmartDuplicates(input: {
@@ -452,7 +596,7 @@ export async function findSmartDuplicates(input: {
         }
       }
 
-      if (vector && vector.length > 0) {
+      if (vector && vector.length === queryEmbedding.length) {
         const sim = cosineSimilarity(queryEmbedding, vector)
         if (sim >= threshold) {
           scored.push({ doubt, similarity: sim })

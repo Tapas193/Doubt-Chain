@@ -79,6 +79,12 @@ export type Doubt = {
   aiGeneratedAt?: string | null
   aiStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
   isAiGenerated?: boolean
+  relevanceScore?: number
+  semanticSimilarity?: number
+  matchType?: 'hybrid' | 'semantic' | 'keyword' | 'keyword_fallback' | 'none'
+  contentSnippet?: string
+  acceptedAnswerSnippet?: string | null
+  faqSnippet?: string | null
 }
 
 export type SmartDuplicateMatch = {
@@ -141,4 +147,53 @@ export type Paginated<T> = {
   limit: number
   total: number
   totalPages: number
+  searchMode?: 'hybrid' | 'keyword_fallback' | 'recent' | 'none'
+}
+
+export type AiConversation = {
+  id: string
+  userId: string
+  title: string
+  subjectId?: string | null
+  language: string
+  createdAt: string
+  updatedAt: string
+  _count?: { messages: number }
+  messages?: AiMessage[]
+}
+
+export type AiMessage = {
+  id: string
+  conversationId: string
+  role: 'user' | 'assistant'
+  content: string
+  retrievedContext?: Array<{
+    doubtId: string
+    title: string
+    subjectName?: string
+    verifiedSolution: string | null
+    faqSummary: string | null
+  }> | null
+  feedback?: {
+    id: string
+    isHelpful: boolean
+  } | null
+  reports?: Array<{ id: string; reason: string }>
+  createdAt: string
+}
+
+export type AiAskResponse = {
+  messageId?: string
+  conversationId?: string
+  answer: string
+  language: 'en' | 'hi' | 'hinglish'
+  generatedBy: string
+  disclaimer: string
+  retrievedContext?: Array<{
+    doubtId: string
+    title: string
+    subjectName?: string
+    verifiedSolution: string | null
+    faqSummary: string | null
+  }>
 }

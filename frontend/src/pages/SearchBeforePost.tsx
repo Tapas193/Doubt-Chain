@@ -14,7 +14,9 @@ export default function SearchBeforePost() {
   const [query, setQuery] = useState('')
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [subjectId, setSubjectId] = useState('')
+  const [resolutionFilter, setResolutionFilter] = useState<'all' | 'resolved' | 'unresolved'>('all')
   const [results, setResults] = useState<Doubt[]>([])
+  const [searchMode, setSearchMode] = useState<string>('hybrid')
   const [smartMatches, setSmartMatches] = useState<SmartDuplicateMatch[]>([])
   const [loading, setLoading] = useState(false)
   const [smartLoading, setSmartLoading] = useState(false)
@@ -41,12 +43,19 @@ export default function SearchBeforePost() {
     setError(null)
 
     const timer = setTimeout(() => {
-      // 1. Regular keyword search (searches all existing doubts, including resolved doubts with accepted answers)
+      const isResolved =
+        resolutionFilter === 'resolved' ? true : resolutionFilter === 'unresolved' ? false : undefined
+
+      // 1. Smart Search 2.0: Hybrid search with relevance ranking & snippets
       doubtService
-        .searchDoubts(trimmed, { subjectId: subjectId || undefined })
+        .searchDoubts(trimmed, {
+          subjectId: subjectId || undefined,
+          isResolved
+        })
         .then(res => {
           if (active) {
             setResults(res.items || [])
+            setSearchMode(res.searchMode || 'hybrid')
             setError(null)
           }
         })
@@ -78,7 +87,7 @@ export default function SearchBeforePost() {
       active = false
       clearTimeout(timer)
     }
-  }, [query, subjectId])
+  }, [query, subjectId, resolutionFilter])
 
   const hasQuery = query.trim().length > 0
 
@@ -125,8 +134,8 @@ export default function SearchBeforePost() {
           </p>
         </div>
 
-        {/* Search bar */}
-        <div className="dc-card p-4">
+        {/* Search bar & Filters */}
+        <div className="dc-card p-4 space-y-3">
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative min-w-[200px] flex-1">
               <svg
@@ -158,11 +167,13 @@ export default function SearchBeforePost() {
                 </div>
               )}
             </div>
+
+            {/* Subject Filter */}
             <select
               value={subjectId}
               onChange={e => setSubjectId(e.target.value)}
               aria-label="Filter by subject"
-              className="dc-input w-auto flex-none"
+              className="dc-input w-auto flex-none text-xs"
             >
               <option value="">{t('common.all')} ({t('nav.subjects')})</option>
               {subjects.map(s => (
@@ -171,10 +182,38 @@ export default function SearchBeforePost() {
                 </option>
               ))}
             </select>
+
+            {/* Resolution Filter */}
+            <select
+              value={resolutionFilter}
+              onChange={e => setResolutionFilter(e.target.value as any)}
+              aria-label="Filter by resolution status"
+              className="dc-input w-auto flex-none text-xs"
+            >
+              <option value="all">{t('doubts.filterAll')}</option>
+              <option value="resolved">{t('doubts.filterResolved')}</option>
+              <option value="unresolved">{t('doubts.filterUnresolved')}</option>
+            </select>
           </div>
+
+          {/* Search Mode & Metadata indicators */}
+          {hasQuery && (
+            <div className="flex flex-wrap items-center justify-between text-[11px] text-dc-subtext pt-1 border-t border-dc-border/50">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-dc-blue">
+                  {searchMode === 'hybrid' ? '⚡ Hybrid Search (Keyword + Semantic Embeddings)' : '🔍 Keyword Match'}
+                </span>
+                <span>•</span>
+                <span>Cross-language: English, हिन्दी, Hinglish</span>
+              </div>
+              <span className="text-[10px] text-slate-500">
+                Programming-language filter: not yet tagged
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Feature 1: Similar Doubts You May Have (Semantic Duplicate Detection) */}
+        {/* Feature 1: Similar Doubts (Semantic Duplicate Detection) */}
         {hasQuery && smartMatches.length > 0 && (
           <div className="rounded-xl border border-dc-blue/40 bg-gradient-to-br from-dc-blue/10 via-dc-card to-dc-card p-5 shadow-lg space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
@@ -342,22 +381,70 @@ export default function SearchBeforePost() {
           )}
 
           {!loading && results.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {results.map(d => (
                 <Link
                   key={d.id}
                   to={`/doubts/${d.id}`}
-                  className="group flex items-start justify-between gap-4 rounded-lg border border-dc-border p-3.5 transition-colors hover:border-dc-blue/40 hover:bg-white/5"
+                  className="group block rounded-xl border border-dc-border bg-dc-card/60 p-4 transition-all hover:border-dc-blue/50 hover:bg-dc-card hover:shadow-md"
                 >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-dc-text group-hover:text-white truncate">
-                      {d.title}
-                    </p>
-                    <p className="mt-0.5 text-xs text-dc-subtext truncate">
-                      {d.subject?.name} · {d._count?.answers ?? 0} {t('detail.replies')}
-                    </p>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {d.subject && (
+                          <span className="rounded bg-dc-border/80 px-2 py-0.5 text-[10px] font-semibold text-dc-subtext">
+                            {d.subject.code || d.subject.name}
+                          </span>
+                        )}
+                        <StatusBadge status={d.isResolved ? 'resolved' : 'unresolved'} />
+                        {d.matchType === 'hybrid' && (
+                          <span className="rounded bg-indigo-500/15 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-medium text-indigo-300">
+                            Hybrid Match ✨
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="text-sm font-semibold text-dc-text group-hover:text-dc-blue transition-colors">
+                        {d.title}
+                      </h3>
+
+                      {/* Description Context Snippet */}
+                      <p className="text-xs text-dc-subtext line-clamp-2">
+                        {d.contentSnippet || d.content.slice(0, 160)}
+                      </p>
+
+                      {/* Verified Human Solution Snippet */}
+                      {d.acceptedAnswerSnippet && (
+                        <div className="mt-2 rounded bg-emerald-500/5 border-l-2 border-emerald-400 p-2 text-xs text-slate-300">
+                          <span className="font-semibold text-emerald-400 not-italic">
+                            ✓ Verified Solution (Human):{' '}
+                          </span>
+                          <span className="italic">"{d.acceptedAnswerSnippet}"</span>
+                        </div>
+                      )}
+
+                      {/* AI FAQ Summary Snippet */}
+                      {d.faqSnippet && (
+                        <div className="mt-1.5 rounded bg-blue-500/5 border-l-2 border-blue-400 p-2 text-xs text-slate-300">
+                          <span className="font-semibold text-blue-400 not-italic">
+                            ✦ AI FAQ Summary:{' '}
+                          </span>
+                          <span>"{d.faqSnippet}"</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      {typeof d.relevanceScore === 'number' && d.relevanceScore > 0 && (
+                        <span className="inline-block rounded-full bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 text-[10px] font-mono font-semibold text-cyan-300">
+                          {Math.round(d.relevanceScore * 100)}% Match
+                        </span>
+                      )}
+                      <p className="mt-1 text-[11px] text-dc-subtext">
+                        {d._count?.answers ?? 0} {t('detail.replies')}
+                      </p>
+                    </div>
                   </div>
-                  <StatusBadge status={d.isResolved ? 'resolved' : 'unresolved'} />
                 </Link>
               ))}
             </div>
@@ -367,4 +454,3 @@ export default function SearchBeforePost() {
     </AppShell>
   )
 }
-

@@ -109,4 +109,65 @@ describe('Frontend doubtService and workflows', () => {
     await doubtService.listFaq({ subjectId: 'sub-1', q: 'tree', sortBy: 'recent' })
     expect(api.get).toHaveBeenCalledWith('/faq?subjectId=sub-1&q=tree&sortBy=recent')
   })
+
+  describe('AI Study Assistant 2.0 frontend workflows', () => {
+    it('posts question with mode, history, and response language', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({
+        answer: 'Recursion breaks problems into smaller subproblems.',
+        language: 'en',
+        generatedBy: 'Gemini AI',
+        disclaimer: 'AI-generated'
+      })
+
+      const res = await doubtService.askStudyAssistant({
+        question: 'Explain recursion',
+        mode: 'step-by-step',
+        responseLanguage: 'en',
+        history: [{ role: 'user', content: 'hello' }]
+      })
+
+      expect(api.post).toHaveBeenCalledWith('/ai/ask', {
+        question: 'Explain recursion',
+        mode: 'step-by-step',
+        responseLanguage: 'en',
+        history: [{ role: 'user', content: 'hello' }]
+      })
+      expect(res.answer).toContain('Recursion')
+    })
+
+    it('submits helpful feedback for an AI response', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({ id: 'fb-1', status: 'recorded' })
+      const res = await doubtService.submitAiFeedback({ messageId: 'msg-1', isHelpful: true })
+      expect(api.post).toHaveBeenCalledWith('/ai/feedback', { messageId: 'msg-1', isHelpful: true })
+      expect(res.status).toBe('recorded')
+    })
+
+    it('submits a report for incorrect answer', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({ id: 'rep-1', status: 'submitted', message: 'Report submitted' })
+      const res = await doubtService.submitAiReport({
+        messageId: 'msg-1',
+        reason: 'INCORRECT_CODE',
+        details: 'Infinite loop on base case'
+      })
+      expect(api.post).toHaveBeenCalledWith('/ai/report', {
+        messageId: 'msg-1',
+        reason: 'INCORRECT_CODE',
+        details: 'Infinite loop on base case'
+      })
+      expect(res.status).toBe('submitted')
+    })
+
+    it('manages AI conversations', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce([{ id: 'c-1', title: 'Binary Trees' }])
+      vi.mocked(api.delete).mockResolvedValueOnce({ deleted: true })
+
+      const list = await doubtService.listAiConversations()
+      expect(api.get).toHaveBeenCalledWith('/ai/conversations')
+      expect(list).toHaveLength(1)
+
+      const del = await doubtService.deleteAiConversation('c-1')
+      expect(api.delete).toHaveBeenCalledWith('/ai/conversations/c-1')
+      expect(del.deleted).toBe(true)
+    })
+  })
 })
