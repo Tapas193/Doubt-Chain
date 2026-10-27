@@ -1,0 +1,109 @@
+// Prisma schema for Doubt-Chain
+// Designed from PRD: User, Subject, Doubt, Answer, upvote representation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Profession {
+  STUDENT
+  PROFESSOR
+  CORPORATE_WORKER
+}
+
+model User {
+  id                    String     @id @default(cuid())
+  email                 String     @unique
+  username              String     @unique
+  displayName           String
+  fullName              String?
+  profession            Profession?
+  identificationNumber  String?
+  passwordHash          String
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  doubts   Doubt[]
+  answers  Answer[]
+  upvotes  AnswerUpvote[]
+
+  @@index([profession])
+}
+
+model Subject {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  doubts Doubt[]
+}
+
+model Doubt {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  mediaUrl    String?
+  mediaType   MediaType?
+  isResolved  Boolean  @default(false)
+  resolvedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+
+  answers Answer[]
+
+  @@index([subjectId, isResolved, createdAt])
+  @@index([authorId])
+}
+
+model Answer {
+  id        String   @id @default(cuid())
+  content   String
+  mediaUrl  String?
+  mediaType MediaType?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  doubtId String
+  doubt   Doubt  @relation(fields: [doubtId], references: [id], onDelete: Cascade)
+
+  upvotes AnswerUpvote[]
+
+  @@index([doubtId, createdAt])
+  @@index([authorId])
+}
+
+model AnswerUpvote {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  answerId String
+  answer   Answer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, answerId])
+  @@index([answerId])
+}
+
+enum MediaType {
+  IMAGE
+  AUDIO
+}

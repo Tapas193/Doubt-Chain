@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Fonts ────────────────────────────────────────────────────────── */
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: #080B14;
+    color: #F1F5F9;
+    min-height: 100vh;
+    scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
+    scrollbar-width: thin;
+  }
+
+  ::-webkit-scrollbar        { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track  { background: transparent; }
+  ::-webkit-scrollbar-thumb  { background: rgba(100, 116, 139, 0.3); border-radius: 9999px; }
+
+  a { color: inherit; text-decoration: none; }
+
+  :focus-visible {
+    outline: 2px solid rgba(22, 119, 255, 0.8);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* ── Subtle dot grid (restrained) ────────────────────────────────── */
+.dc-grid-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(circle, rgba(100, 116, 139, 0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* ── Form field baseline ─────────────────────────────────────────── */
+@layer components {
+  .dc-input {
+    @apply w-full rounded-lg border border-dc-border bg-dc-bg2 px-4 py-2.5
+           text-sm text-dc-text placeholder:text-dc-subtext
+           transition-colors duration-150
+           focus:border-dc-blue/70 focus:outline-none focus:ring-1 focus:ring-dc-blue/30;
+  }
+
+  .dc-input-error {
+    @apply border-dc-red/60 focus:border-dc-red focus:ring-dc-red/20;
+  }
+
+  .dc-label {
+    @apply block text-sm font-medium text-dc-text mb-1.5;
+  }
+
+  .dc-label-sub {
+    @apply block text-xs text-dc-subtext mb-1;
+  }
+
+  /* Buttons */
+  .dc-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5
+           text-sm font-medium transition-all duration-150
+           disabled:cursor-not-allowed disabled:opacity-50
+           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2;
+  }
+
+  .dc-btn-primary {
+    @apply dc-btn bg-dc-red text-white
+           hover:brightness-110 active:scale-[0.98]
+           focus-visible:outline-dc-red;
+  }
+
+  .dc-btn-secondary {
+    @apply dc-btn border border-dc-border text-dc-text
+           hover:border-dc-blue/50 hover:bg-white/5 active:scale-[0.98]
+           focus-visible:outline-dc-blue;
+  }
+
+  .dc-btn-ghost {
+    @apply dc-btn text-dc-subtext hover:text-dc-text hover:bg-white/5;
+  }
+
+  /* Cards */
+  .dc-card {
+    @apply rounded-xl border border-dc-border bg-dc-card shadow-dc-card;
+  }
+
+  /* Skeleton loader */
+  .dc-skeleton {
+    @apply animate-pulse rounded bg-dc-muted/40;
+  }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
