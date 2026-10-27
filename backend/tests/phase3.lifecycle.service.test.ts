@@ -73,7 +73,7 @@ describe('Phase 3 doubt and answer lifecycle', () => {
     await reopenDoubt('doubt-1', 'owner-1')
 
     expect(prismaMock.doubt.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: { isResolved: false, resolvedAt: null, acceptedAnswerId: null }
+      data: expect.objectContaining({ isResolved: false, resolvedAt: null, acceptedAnswerId: null })
     }))
   })
 

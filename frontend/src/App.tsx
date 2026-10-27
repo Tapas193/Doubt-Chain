@@ -6,6 +6,8 @@ import Discussions from './pages/Discussions'
 import DoubtDetail from './pages/DoubtDetail'
 import FAQ from './pages/FAQ'
 import NewDoubt from './pages/NewDoubt'
+import Subjects from './pages/Subjects'
+import SubjectBoard from './pages/SubjectBoard'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import NotFound from './pages/NotFound'
@@ -14,6 +16,8 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Dashboard />} />
+      <Route path="/subjects" element={<Subjects />} />
+      <Route path="/subjects/:id" element={<SubjectBoard />} />
       <Route path="/search" element={<SearchBeforePost />} />
       <Route path="/ai-assistant" element={<AIAssistant />} />
       <Route path="/doubts" element={<Discussions />} />

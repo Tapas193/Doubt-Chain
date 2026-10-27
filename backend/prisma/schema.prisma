@@ -32,6 +32,9 @@ model User {
   answers  Answer[]
   upvotes  AnswerUpvote[]
   comments AnswerComment[]
+  subjectMemberships SubjectMember[]
+  attachments Attachment[]
+  searchFeedbacks SearchFeedback[]
 
   @@index([profession])
 }
@@ -41,10 +44,26 @@ model Subject {
   name        String   @unique
   code        String   @unique
   description String?
+  joinCode    String?  @unique
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  doubts Doubt[]
+  doubts  Doubt[]
+  members SubjectMember[]
+}
+
+model SubjectMember {
+  id        String   @id @default(cuid())
+  userId    String
+  subjectId String
+  joinedAt  DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, subjectId])
+  @@index([subjectId])
+  @@index([userId])
 }
 
 model Doubt {
@@ -68,6 +87,16 @@ model Doubt {
   acceptedAnswerId String?   @unique
   acceptedAnswer   Answer?   @relation("AcceptedAnswer", fields: [acceptedAnswerId], references: [id], onDelete: SetNull)
 
+  attachments Attachment[]
+  embedding   DoubtEmbedding?
+  feedbacks   SearchFeedback[]
+
+  aiQuestion    String?
+  aiAnswer      String?
+  aiTags        String[]          @default([])
+  aiGeneratedAt DateTime?
+  aiStatus      ProcessingStatus  @default(COMPLETED)
+
   @@index([subjectId, isResolved, createdAt])
   @@index([authorId])
 }
@@ -88,11 +117,17 @@ model Answer {
   doubt       Doubt  @relation("DoubtAnswers", fields: [doubtId], references: [id], onDelete: Cascade)
   acceptedBy  Doubt? @relation("AcceptedAnswer")
 
-  upvotes AnswerUpvote[]
-  comments AnswerComment[]
+  parentAnswerId String?
+  parentAnswer   Answer?  @relation("AnswerReplies", fields: [parentAnswerId], references: [id], onDelete: Cascade)
+  replies        Answer[] @relation("AnswerReplies")
+
+  upvotes     AnswerUpvote[]
+  comments    AnswerComment[]
+  attachments Attachment[]
 
   @@index([doubtId, createdAt])
   @@index([authorId])
+  @@index([parentAnswerId])
 }
 
 model AnswerUpvote {
@@ -127,7 +162,74 @@ model AnswerComment {
   @@index([authorId])
 }
 
+model Attachment {
+  id               String           @id @default(cuid())
+  url              String
+  filename         String
+  fileType         MediaType
+  mimeType         String
+  size             Int
+  extractedText    String?
+  processingStatus ProcessingStatus @default(COMPLETED)
+  processingError  String?
+  createdAt        DateTime         @default(now())
+
+  doubtId    String?
+  doubt      Doubt?    @relation(fields: [doubtId], references: [id], onDelete: Cascade)
+
+  answerId   String?
+  answer     Answer?   @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  uploaderId String
+  uploader   User      @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@index([doubtId])
+  @@index([answerId])
+  @@index([uploaderId])
+}
+
+model DoubtEmbedding {
+  id          String   @id @default(cuid())
+  doubtId     String   @unique
+  doubt       Doubt    @relation(fields: [doubtId], references: [id], onDelete: Cascade)
+  contentHash String
+  vector      Float[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([doubtId])
+}
+
+model SearchFeedback {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  doubtId   String?
+  doubt     Doubt?         @relation(fields: [doubtId], references: [id], onDelete: SetNull)
+  action    FeedbackAction
+  query     String
+  createdAt DateTime       @default(now())
+
+  @@unique([userId, doubtId, action, query])
+  @@index([userId])
+  @@index([doubtId])
+}
+
 enum MediaType {
   IMAGE
   AUDIO
 }
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum FeedbackAction {
+  ANSWERED_MY_DOUBT
+  NONE_HELPED_POSTED
+}
+
+

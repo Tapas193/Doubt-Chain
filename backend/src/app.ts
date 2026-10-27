@@ -1,8 +1,11 @@
+import { env } from './config/env.js'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import cookieParser from 'cookie-parser'
 import rateLimit from 'express-rate-limit'
+import fs from 'fs'
+import { fileURLToPath } from 'url'
 
 import healthRouter from './routes/health.js'
 import aiRouter from './routes/ai.js'
@@ -11,13 +14,17 @@ import subjectsRouter from './routes/subjects.js'
 import doubtsRouter from './routes/doubts.js'
 import answersRouter from './routes/answers.js'
 import faqRouter from './routes/faq.js'
+import uploadRouter from './routes/uploads.js'
 
 import { errorHandler } from './middleware/errorHandler.js'
-import { env } from './config/env.js'
 
 const app = express()
 
-app.use(helmet())
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+  })
+)
 
 const allowedOrigins = [
   env.CLIENT_ORIGIN,
@@ -43,9 +50,16 @@ app.use(
   })
 )
 
-app.use(express.json({ limit: '1mb' }))
-app.use(express.urlencoded({ extended: true, limit: '1mb' }))
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.use(cookieParser())
+
+// Serve static uploads
+const uploadDir = fileURLToPath(new URL('../uploads', import.meta.url))
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true })
+}
+app.use('/uploads', express.static(uploadDir))
 
 app.get('/', (_req, res) => {
   res.json({
@@ -61,6 +75,7 @@ app.use('/api/v1/doubts', doubtsRouter)
 app.use('/api/v1/answers', answersRouter)
 app.use('/api/v1/faq', faqRouter)
 app.use('/api/v1/ai', aiRouter)
+app.use('/api/v1/uploads', uploadRouter)
 
 app.use(errorHandler)
 

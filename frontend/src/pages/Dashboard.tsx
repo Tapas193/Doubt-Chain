@@ -78,8 +78,13 @@ export default function Dashboard() {
         {/* Subjects */}
         <section>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-dc-text">Subjects</h2>
-            <span className="text-xs text-dc-subtext">{subjects.length} boards</span>
+            <div>
+              <h2 className="text-base font-semibold text-dc-text">Subject Boards</h2>
+              <span className="text-xs text-dc-subtext">{subjects.length} active boards</span>
+            </div>
+            <Link to="/subjects" className="text-xs text-dc-blue hover:underline underline-offset-2">
+              Browse all boards →
+            </Link>
           </div>
           {loading ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -93,7 +98,16 @@ export default function Dashboard() {
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {subjects.map(s => (
-                <SubjectCard key={s.id} name={s.name} code={s.code} description={s.description ?? undefined} />
+                <SubjectCard
+                  key={s.id}
+                  id={s.id}
+                  name={s.name}
+                  code={s.code}
+                  description={s.description ?? undefined}
+                  doubtsCount={s._count?.doubts}
+                  membersCount={s._count?.members}
+                  isMember={s.isMember}
+                />
               ))}
             </div>
           )}

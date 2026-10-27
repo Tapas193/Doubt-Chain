@@ -5,17 +5,17 @@ const prisma = new PrismaClient()
 
 async function main() {
   const subjects = [
-    { name: 'Data Structures', code: 'CS201', description: 'Arrays, stacks, queues, trees, graphs' },
-    { name: 'Object Oriented Programming', code: 'CS202', description: 'Classes, inheritance, polymorphism' },
-    { name: 'Digital Logic', code: 'CS203', description: 'Boolean algebra, combinational and sequential circuits' },
-    { name: 'Operating Systems', code: 'CS204', description: 'Processes, memory, files, concurrency' },
-    { name: 'Database Management Systems', code: 'CS205', description: 'SQL, normalization, transactions' }
+    { name: 'Data Structures', code: 'CS201', description: 'Arrays, stacks, queues, trees, graphs', joinCode: 'DS-201' },
+    { name: 'Object Oriented Programming', code: 'CS202', description: 'Classes, inheritance, polymorphism', joinCode: 'OOP-202' },
+    { name: 'Digital Logic', code: 'CS203', description: 'Boolean algebra, combinational and sequential circuits', joinCode: 'DL-203' },
+    { name: 'Operating Systems', code: 'CS204', description: 'Processes, memory, files, concurrency', joinCode: 'OS-204' },
+    { name: 'Database Management Systems', code: 'CS205', description: 'SQL, normalization, transactions', joinCode: 'DBMS-205' }
   ]
 
   for (const subject of subjects) {
     await prisma.subject.upsert({
       where: { code: subject.code },
-      update: { name: subject.name, description: subject.description },
+      update: { name: subject.name, description: subject.description, joinCode: subject.joinCode },
       create: subject
     })
   }

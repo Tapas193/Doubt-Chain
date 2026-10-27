@@ -39,6 +39,25 @@ function defaultForm() {
   return { fullName: '', profession: '', identificationNumber: '', email: '', password: '', confirmPassword: '' }
 }
 
+interface FieldProps {
+  id: string
+  label: string
+  sub?: string
+  error?: string
+  children: React.ReactNode
+}
+
+function Field({ id, label, sub, error, children }: FieldProps) {
+  return (
+    <div>
+      <label htmlFor={id} className="dc-label">{label}</label>
+      {sub && <p className="mb-1.5 text-xs text-dc-subtext">{sub}</p>}
+      {children}
+      {error && <p role="alert" className="mt-1.5 text-xs text-rose-400">{error}</p>}
+    </div>
+  )
+}
+
 export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
@@ -75,15 +94,6 @@ export default function Register() {
       setLoading(false)
     }
   }
-
-  const Field = ({ id, label, sub, error, children }: { id: string; label: string; sub?: string; error?: string; children: React.ReactNode }) => (
-    <div>
-      <label htmlFor={id} className="dc-label">{label}</label>
-      {sub && <p className="mb-1.5 text-xs text-dc-subtext">{sub}</p>}
-      {children}
-      {error && <p role="alert" className="mt-1.5 text-xs text-rose-400">{error}</p>}
-    </div>
-  )
 
   return (
     <div className="relative flex min-h-screen items-center justify-center px-4 py-12">

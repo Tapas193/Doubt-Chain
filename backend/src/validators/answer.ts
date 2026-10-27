@@ -5,8 +5,9 @@ export const createAnswerSchema = z.object({
     id: z.string().min(1)
   }),
   body: z.object({
-    content: z.string().min(1),
-    mediaUrl: z.string().url().optional(),
+    content: z.string().min(1, 'Answer content is required'),
+    parentAnswerId: z.string().min(1).optional(),
+    mediaUrl: z.string().min(1).optional(),
     mediaType: z.enum(['IMAGE', 'AUDIO']).optional()
   })
 })
@@ -23,7 +24,7 @@ export const updateAnswerSchema = z.object({
   }),
   body: z.object({
     content: z.string().min(1).optional(),
-    mediaUrl: z.string().url().optional(),
+    mediaUrl: z.string().min(1).optional(),
     mediaType: z.enum(['IMAGE', 'AUDIO']).optional()
   })
 })

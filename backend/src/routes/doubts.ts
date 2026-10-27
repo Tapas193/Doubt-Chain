@@ -1,7 +1,17 @@
 import { Router } from 'express'
-import { create, list, getById, update, resolve, accept, reopen, search } from '../controllers/doubt.controller.js'
+import { create, list, getById, update, resolve, accept, reopen, search, smartSearch, feedback } from '../controllers/doubt.controller.js'
 import { validate } from '../middleware/validate.js'
-import { acceptDoubtSchema, createDoubtSchema, listDoubtsQuerySchema, doubtParamsSchema, resolveDoubtSchema, updateDoubtSchema, searchDoubtsQuerySchema } from '../validators/doubt.js'
+import {
+  acceptDoubtSchema,
+  createDoubtSchema,
+  listDoubtsQuerySchema,
+  doubtParamsSchema,
+  resolveDoubtSchema,
+  updateDoubtSchema,
+  searchDoubtsQuerySchema,
+  smartSearchQuerySchema,
+  searchFeedbackSchema
+} from '../validators/doubt.js'
 import { requireAuth, optionalAuth } from '../middleware/auth.js'
 import { create as createAnswerCtrl, list as listAnswersCtrl } from '../controllers/answer.controller.js'
 import { createAnswerSchema } from '../validators/answer.js'
@@ -9,6 +19,8 @@ import { asyncWrap } from '../utils/asyncWrap.js'
 
 const router = Router()
 
+router.get('/smart-duplicates', optionalAuth, validate(smartSearchQuerySchema), asyncWrap(smartSearch))
+router.post('/search-feedback', requireAuth, validate(searchFeedbackSchema), asyncWrap(feedback))
 router.get('/search', optionalAuth, validate(searchDoubtsQuerySchema), asyncWrap(search))
 router.get('/', optionalAuth, validate(listDoubtsQuerySchema), asyncWrap(list))
 router.post('/', requireAuth, validate(createDoubtSchema), asyncWrap(create))
