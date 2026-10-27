@@ -4,7 +4,6 @@
 * **Product Name:** Doubt Chain
 * **Problem Statement ID & Title:** PS 14: Doubt Chain - Peer-to-Peer Doubt Resolution Tracker
 * **Hackathon Name:** Graphite 26 Hackathon
-* **Team Name:** [Team Name TBD - Tapas, Sumit, Prachi, Harshita]
 * **Document Version:** 1.0.0
 * **Creation Date:** 2026-10-27
 * **Document Status:** DRAFT - Ready for MVP Development
