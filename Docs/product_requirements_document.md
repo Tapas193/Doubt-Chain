@@ -7,7 +7,7 @@
 * **Document Version:** 1.0.0
 * **Creation Date:** 2026-10-27
 * **Document Status:** DRAFT - Ready for MVP Development
-* **Project Stakeholders:** Hackathon Judges, University Administration (e.g., Graphic Era Hill University), Faculty Guides (e.g., Mrs. Senam Pandey).
+* **Project Stakeholders:** Hackathon Judges, University Administration (e.g., Graphic Era Hill University)
 
 ## 2. Executive Summary
 **Doubt Chain** is a hyper-local, peer-to-peer academic resolution platform designed for university ecosystems. It solves the problem of "community knowledge decay," where valuable peer-provided solutions are lost in chaotic, unsearchable WhatsApp or Discord groups. By providing a subject-wise dashboard with frictionless multi-modal input (text, photo, voice), Doubt Chain captures ephemeral academic discussions. Its core differentiating capability is the "Search-Before-Posting" gatekeeper and the dynamic state-shift that automatically converts resolved threads into a permanent, searchable FAQ. The hackathon MVP will demonstrate a functioning subject board, the active interception of duplicate queries, and the automated generation of an FAQ database upon doubt resolution.
