@@ -3,6 +3,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../i18n/LanguageContext'
 import LanguageSelector from '../components/LanguageSelector'
+import AuthHeroPanel from '../components/AuthHeroPanel'
+import { Eye, EyeOff, ShieldAlert, ArrowRight } from 'lucide-react'
 
 export default function Login() {
   const { login } = useAuth()
@@ -20,131 +22,163 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    if (!email.trim()) { setError(t('auth.fieldRequired')); return }
-    if (!password) { setError(t('auth.fieldRequired')); return }
+    if (!email.trim()) {
+      setError(t('auth.fieldRequired') || 'Email is required')
+      return
+    }
+    if (!password) {
+      setError(t('auth.fieldRequired') || 'Password is required')
+      return
+    }
     setLoading(true)
     try {
       await login(email.trim().toLowerCase(), password)
       navigate(from, { replace: true })
     } catch (err: any) {
-      setError(err.message || 'Login failed. Check your credentials.')
+      if (err.status === 429 || (err.message && err.message.includes('429'))) {
+        setError('Too many login attempts. Please wait a moment before trying again.')
+      } else {
+        setError(err.message || 'Login failed. Check your credentials.')
+      }
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4 py-12">
+    <div className="relative flex min-h-screen items-center justify-center bg-dc-bg p-4 sm:p-6 lg:p-8">
+      {/* Background Subtle Web Grid & Lighting */}
       <div className="dc-grid-bg" aria-hidden="true" />
-
-      {/* Top right language selector */}
-      <div className="absolute top-4 right-4 z-20">
+      <div className="absolute top-4 right-4 z-30">
         <LanguageSelector />
       </div>
 
-      <div className="relative z-10 w-full max-w-[400px] animate-slide-up">
-        {/* Brand */}
-        <div className="mb-8 text-center">
-          <div className="mb-4 inline-flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-dc-red shadow-dc-red" />
-            <span className="text-xs font-semibold tracking-[0.2em] text-dc-subtext uppercase">Doubt-Chain</span>
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-dc-text">{t('auth.loginTitle')}</h1>
-          <p className="mt-1.5 text-sm text-dc-subtext">{t('auth.loginSubtitle')}</p>
-        </div>
+      <div className="relative z-10 flex w-full max-w-5xl gap-8 animate-fade-in items-stretch">
+        {/* Left Side: Cinematic Superhero Hero Panel */}
+        <AuthHeroPanel
+          headline="Every Hero Starts With a Question."
+          subtitle="Join the network where students connect, solve doubts, and level up together."
+        />
 
-        {/* Card */}
-        <div className="dc-card p-6">
-          {/* Error banner */}
-          {error && (
-            <div
-              role="alert"
-              className="mb-5 flex items-start gap-2.5 rounded-lg border border-dc-red/30 bg-dc-red/10 px-4 py-3 text-sm text-rose-300"
-            >
-              <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-              </svg>
-              {error}
-            </div>
-          )}
+        {/* Right Side: Authentication Card */}
+        <div className="flex w-full lg:w-1/2 flex-col justify-center">
+          <div className="relative overflow-hidden rounded-3xl border border-dc-border bg-dc-card/90 p-8 shadow-2xl backdrop-blur-xl sm:p-10">
+            {/* Top spider accent line */}
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#E62429] via-[#1677FF] to-[#00E5FF]" />
 
-          <form onSubmit={handleSubmit} noValidate className="space-y-5">
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="dc-label">{t('auth.emailLabel')}</label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder={t('auth.emailPlaceholder')}
-                required
-                className={`dc-input ${error && !email.trim() ? 'dc-input-error' : ''}`}
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className="dc-label">{t('auth.passwordLabel')}</label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPw ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder={t('auth.passwordPlaceholder')}
-                  required
-                  className="dc-input pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(s => !s)}
-                  aria-label={showPw ? 'Hide password' : 'Show password'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-dc-subtext hover:text-dc-text transition-colors"
-                >
-                  {showPw ? (
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
-                    </svg>
-                  ) : (
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  )}
-                </button>
+            {/* Header */}
+            <div className="mb-6">
+              <div className="mb-3 inline-flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-dc-red shadow-[0_0_8px_#E62429]" />
+                <span className="text-[11px] font-bold tracking-[0.25em] text-dc-subtext uppercase">
+                  Doubt-Chain Network
+                </span>
               </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-dc-text">
+                {t('auth.loginTitle') || 'Welcome Back'}
+              </h1>
+              <p className="mt-1.5 text-xs sm:text-sm text-dc-subtext">
+                {t('auth.loginSubtitle') || 'Sign in to access your doubts and learning circles.'}
+              </p>
             </div>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="dc-btn-primary w-full"
-            >
-              {loading ? (
-                <>
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                  {t('auth.loggingIn')}
-                </>
-              ) : t('nav.signIn')}
-            </button>
-          </form>
+            {/* Error Banner */}
+            {error && (
+              <div
+                role="alert"
+                className="mb-5 flex items-start gap-2.5 rounded-xl border border-dc-red/30 bg-dc-red/10 px-4 py-3 text-xs sm:text-sm text-rose-300 animate-slide-up"
+              >
+                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-dc-red" />
+                <span>{error}</span>
+              </div>
+            )}
 
-          <p className="mt-5 text-center text-sm text-dc-subtext">
-            {t('auth.noAccount')}{' '}
-            <Link to="/register" className="font-medium text-dc-blue hover:underline underline-offset-2">
-              {t('auth.signUpPrompt')}
-            </Link>
-          </p>
+            {/* Login Form */}
+            <form onSubmit={handleSubmit} noValidate className="space-y-4">
+              {/* Email */}
+              <div>
+                <label htmlFor="email" className="dc-label text-xs uppercase tracking-wider font-semibold">
+                  {t('auth.emailLabel') || 'Email Address'}
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder={t('auth.emailPlaceholder') || 'hero@doubtchain.edu'}
+                  required
+                  className={`dc-input text-sm ${error && !email.trim() ? 'dc-input-error' : ''}`}
+                />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label htmlFor="password" className="dc-label text-xs uppercase tracking-wider font-semibold">
+                  {t('auth.passwordLabel') || 'Password'}
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPw ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder={t('auth.passwordPlaceholder') || '••••••••'}
+                    required
+                    className="dc-input pr-10 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(s => !s)}
+                    aria-label={showPw ? 'Hide password' : 'Show password'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-dc-subtext hover:text-dc-text transition-colors"
+                  >
+                    {showPw ? (
+                      <EyeOff className="h-4 w-4 text-dc-subtext" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-dc-subtext" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Button: Superhero CTA */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="group relative mt-2 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-[#E62429] via-[#D11D22] to-[#B91C1C] py-3 text-sm font-bold uppercase tracking-wider text-white shadow-[0_0_20px_rgba(230,36,41,0.4)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    <span>{t('auth.loggingIn') || 'Authenticating...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <span>ENTER THE NETWORK</span>
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Bottom Register Redirect */}
+            <div className="mt-6 border-t border-dc-border/60 pt-4 text-center text-xs text-dc-subtext">
+              {t('auth.noAccount') || 'New to the academic network?'}{' '}
+              <Link
+                to="/register"
+                className="font-bold text-dc-blue hover:text-dc-blue-hover hover:underline underline-offset-4 ml-1"
+              >
+                JOIN THE SPIDER-VERSE
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   )
 }
-

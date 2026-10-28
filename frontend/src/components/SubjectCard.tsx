@@ -36,12 +36,12 @@ export default function SubjectCard({
 
   const content = (
     <article
-      className={`group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-gradient-to-br ${colorClass} to-transparent p-5 shadow-dc-card transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg`}
+      className={`group relative flex flex-col justify-between overflow-hidden rounded-xl border border-dc-border bg-dc-card bg-gradient-to-br ${colorClass} to-transparent p-5 shadow-dc-card transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg hover:border-dc-blue/60`}
     >
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-base font-semibold text-dc-text group-hover:text-white">
+            <h3 className="truncate text-base font-semibold text-dc-text group-hover:text-dc-blue transition-colors">
               {name}
             </h3>
             {code && (

@@ -9,6 +9,9 @@ import { Doubt, Answer } from '../types/api'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../i18n/LanguageContext'
 import ContentTranslationControl from '../components/ContentTranslationControl'
+import AskWiderNetworkModal from '../components/AskWiderNetworkModal'
+import { communityService } from '../services/communityService'
+import { Building2, Globe, Lock } from 'lucide-react'
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-IN', {
@@ -28,6 +31,7 @@ export default function DoubtDetail() {
   const [answers, setAnswers] = useState<Answer[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
 
 
   // Primary answer form
@@ -486,7 +490,31 @@ export default function DoubtDetail() {
         </div>
 
         {loading && <LoadingState message="Loading doubt discussion…" />}
-        {error && <ErrorState message={error} onRetry={load} />}
+        {error && (
+          error.toLowerCase().includes('forbidden') || error.toLowerCase().includes('private') || error.toLowerCase().includes('restricted') ? (
+            <div className="rounded-3xl border border-dc-border bg-dc-card p-10 text-center space-y-4 shadow-xl">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-dc-blue/10 text-dc-blue border border-dc-blue/20">
+                <Lock className="h-7 w-7" />
+              </div>
+              <h2 className="text-xl font-bold text-dc-text">
+                College-Only Discussion
+              </h2>
+              <p className="text-xs text-dc-subtext max-w-md mx-auto leading-relaxed">
+                {error}
+              </p>
+              <div className="pt-2 flex items-center justify-center gap-3">
+                <Link to="/community/explore" className="dc-btn-primary px-4 py-2 text-xs font-semibold">
+                  Explore College Communities
+                </Link>
+                <Link to="/wider-network" className="rounded-xl border border-dc-border bg-dc-bg2 px-4 py-2 text-xs font-semibold text-dc-text">
+                  Browse Wider Network
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <ErrorState message={error} onRetry={load} />
+          )
+        )}
 
         {!loading && doubt && (
           <>
@@ -494,6 +522,15 @@ export default function DoubtDetail() {
             <article className="dc-card p-6 space-y-4 shadow-dc-card">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
+                  {doubt.community && (
+                    <Link
+                      to={`/community/${doubt.community.slug}`}
+                      className="inline-flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-xs font-bold text-purple-400 hover:bg-purple-500/20 transition-colors"
+                    >
+                      <Building2 className="h-3 w-3" />
+                      {doubt.community.name} [{doubt.community.code}]
+                    </Link>
+                  )}
                   {doubt.subject && (
                     <Link
                       to={`/subjects/${doubt.subject.id}`}
@@ -502,8 +539,30 @@ export default function DoubtDetail() {
                       {doubt.subject.name} ({doubt.subject.code})
                     </Link>
                   )}
+                  {doubt.isSharedWithWiderNetwork ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-dc-blue/40 bg-dc-blue/10 px-2.5 py-0.5 text-xs font-semibold text-dc-blue">
+                      <Globe className="h-3 w-3" />
+                      Wider Academic Network
+                    </span>
+                  ) : doubt.communityId ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-dc-border bg-dc-bg2 px-2.5 py-0.5 text-xs font-semibold text-dc-subtext">
+                      <Lock className="h-3 w-3" />
+                      College Only
+                    </span>
+                  ) : null}
                   <StatusBadge status={doubt.isResolved ? 'resolved' : 'unresolved'} />
                 </div>
+
+                {isOwner && doubt.communityId && !doubt.isSharedWithWiderNetwork && (
+                  <button
+                    type="button"
+                    onClick={() => setShareModalOpen(true)}
+                    className="flex items-center gap-1.5 rounded-xl border border-dc-blue/40 bg-dc-blue/10 px-3 py-1.5 text-xs font-semibold text-dc-blue hover:bg-dc-blue hover:text-white transition-all shadow-sm"
+                  >
+                    <Globe className="h-3.5 w-3.5" />
+                    Ask the Wider Network
+                  </button>
+                )}
               </div>
 
               {editingDoubt ? (
@@ -818,8 +877,22 @@ export default function DoubtDetail() {
                 </p>
               )}
             </section>
-
           </>
+        )}
+
+        {doubt && (
+          <AskWiderNetworkModal
+            isOpen={shareModalOpen}
+            onClose={() => setShareModalOpen(false)}
+            onConfirm={async () => {
+              if (doubt.communityId) {
+                await communityService.shareDiscussion(doubt.communityId, doubt.id)
+                setDoubt(d => (d ? { ...d, isSharedWithWiderNetwork: true } : d))
+              }
+            }}
+            discussionTitle={doubt.title}
+            collegeName={doubt.community?.name}
+          />
         )}
       </div>
     </AppShell>

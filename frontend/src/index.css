@@ -1,8 +1,53 @@
+@import './design-system.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ── Fonts ────────────────────────────────────────────────────────── */
+/* ── Spider-Verse CSS Tokens ───────────────────────────────────────── */
+:root,
+:root[data-theme="light"] {
+  /* Light Theme - Clean Crisp Academic White */
+  --dc-bg: #FFFFFF;
+  --dc-bg2: #F8FAFC;
+  --dc-card: #FFFFFF;
+  --dc-border: #E2E8F0;
+  --dc-border-strong: #CBD5E1;
+  --dc-text: #0F172A;
+  --dc-subtext: #475569;
+  --dc-muted: #64748B;
+  --dc-red: #E62429;
+  --dc-red-hover: #D11D22;
+  --dc-blue: #0284C7;
+  --dc-blue-hover: #0369A1;
+  --dc-glow: rgba(2, 132, 199, 0.15);
+  --dc-card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --web-line-color: rgba(14, 165, 233, 0.06);
+  --spider-accent: #E62429;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  /* Dark Spider-Verse Theme */
+  --dc-bg: #080B14;
+  --dc-bg2: #0D1322;
+  --dc-card: #111827;
+  --dc-border: rgba(148, 163, 184, 0.15);
+  --dc-border-strong: rgba(148, 163, 184, 0.25);
+  --dc-text: #F1F5F9;
+  --dc-subtext: #94A3B8;
+  --dc-muted: #64748B;
+  --dc-red: #E62429;
+  --dc-red-hover: #FF333A;
+  --dc-blue: #1677FF;
+  --dc-blue-hover: #4096FF;
+  --dc-glow: rgba(22, 119, 255, 0.35);
+  --dc-card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+  --web-line-color: rgba(230, 36, 41, 0.12);
+  --spider-accent: #E62429;
+  color-scheme: dark;
+}
+
+/* ── Base Fonts & Body ────────────────────────────────────────────── */
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;
@@ -13,9 +58,10 @@
   }
 
   body {
-    background-color: #080B14;
-    color: #F1F5F9;
+    background-color: var(--dc-bg);
+    color: var(--dc-text);
     min-height: 100vh;
+    transition: background-color 0.2s ease, color 0.2s ease;
     scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
     scrollbar-width: thin;
   }
@@ -27,33 +73,50 @@
   a { color: inherit; text-decoration: none; }
 
   :focus-visible {
-    outline: 2px solid rgba(22, 119, 255, 0.8);
+    outline: 2px solid var(--dc-blue);
     outline-offset: 2px;
     border-radius: 4px;
   }
 }
 
-/* ── Subtle dot grid (restrained) ────────────────────────────────── */
+/* ── Subtle Spider-Web Background Layer ───────────────────────────── */
 .dc-grid-bg {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image: radial-gradient(circle, rgba(100, 116, 139, 0.07) 1px, transparent 1px);
-  background-size: 28px 28px;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(230, 36, 41, 0.05) 0%, transparent 60%),
+    radial-gradient(circle at 100% 100%, rgba(22, 119, 255, 0.05) 0%, transparent 60%),
+    radial-gradient(circle, rgba(100, 116, 139, 0.08) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 32px 32px;
 }
 
-/* ── Form field baseline ─────────────────────────────────────────── */
+:root[data-theme="light"] .dc-grid-bg {
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(230, 36, 41, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(2, 132, 199, 0.03) 0%, transparent 50%),
+    radial-gradient(circle, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 32px 32px;
+}
+
+/* ── Comic Halftone Texture ───────────────────────────────────────── */
+.comic-halftone {
+  background-image: radial-gradient(rgba(230, 36, 41, 0.12) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+/* ── Components & Buttons ─────────────────────────────────────────── */
 @layer components {
   .dc-input {
-    @apply w-full rounded-lg border border-dc-border bg-dc-bg2 px-4 py-2.5
+    @apply w-full rounded-xl border border-dc-border bg-dc-bg2 px-4 py-2.5
            text-sm text-dc-text placeholder:text-dc-subtext
-           transition-colors duration-150
-           focus:border-dc-blue/70 focus:outline-none focus:ring-1 focus:ring-dc-blue/30;
+           transition-all duration-150
+           focus:border-dc-blue focus:outline-none focus:ring-1 focus:ring-sky-500/40;
   }
 
   .dc-input-error {
-    @apply border-dc-red/60 focus:border-dc-red focus:ring-dc-red/20;
+    @apply border-red-500/60 focus:border-dc-red focus:ring-red-500/20;
   }
 
   .dc-label {
@@ -64,10 +127,10 @@
     @apply block text-xs text-dc-subtext mb-1;
   }
 
-  /* Buttons */
+  /* Spider Action Buttons */
   .dc-btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5
-           text-sm font-medium transition-all duration-150
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5
+           text-sm font-semibold transition-all duration-150
            disabled:cursor-not-allowed disabled:opacity-50
            focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2;
   }
@@ -75,31 +138,42 @@
   .dc-btn-primary {
     @apply dc-btn bg-dc-red text-white
            hover:brightness-110 active:scale-[0.98]
-           focus-visible:outline-dc-red;
+           shadow-sm hover:shadow-dc-red focus-visible:outline-dc-red;
   }
 
   .dc-btn-secondary {
-    @apply dc-btn border border-dc-border text-dc-text
-           hover:border-dc-blue/50 hover:bg-white/5 active:scale-[0.98]
+    @apply dc-btn border border-dc-border bg-dc-card text-dc-text
+           hover:border-dc-blue hover:text-dc-blue hover:bg-sky-500/5 active:scale-[0.98]
            focus-visible:outline-dc-blue;
   }
 
   .dc-btn-ghost {
-    @apply dc-btn text-dc-subtext hover:text-dc-text hover:bg-white/5;
+    @apply dc-btn text-dc-subtext hover:text-dc-text hover:bg-dc-bg2;
   }
 
   /* Cards */
   .dc-card {
-    @apply rounded-xl border border-dc-border bg-dc-card shadow-dc-card;
+    @apply rounded-2xl border border-dc-border bg-dc-card shadow-dc-card transition-colors;
   }
 
   /* Skeleton loader */
   .dc-skeleton {
-    @apply animate-pulse rounded bg-dc-muted/40;
+    @apply animate-pulse rounded-xl bg-slate-500/20;
   }
 }
 
-/* ── Reduced motion ──────────────────────────────────────────────── */
+/* ── Spiderweb Corner Accent Decoration ────────────────────────────── */
+.web-corner-tl {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 48px;
+  height: 48px;
+  pointer-events: none;
+  opacity: 0.25;
+}
+
+/* ── Reduced motion compliance ────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;

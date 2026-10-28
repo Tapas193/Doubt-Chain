@@ -29,6 +29,8 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     }
   }
 
+  console.error('[API Error]', err)
+
   if (err instanceof Error) {
     return res.status(500).json(fail('Internal server error', err.message))
   }

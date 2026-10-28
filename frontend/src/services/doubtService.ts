@@ -1,5 +1,21 @@
 import { api } from '../lib/apiClient'
-import { Doubt, Paginated, Subject, Answer, AnswerComment, Attachment, SmartDuplicateMatch, AiAskResponse, AiConversation } from '../types/api'
+import {
+  Doubt,
+  Paginated,
+  Subject,
+  Answer,
+  AnswerComment,
+  Attachment,
+  SmartDuplicateMatch,
+  AiAskResponse,
+  AiConversation,
+  AnalyticsSummary,
+  TopicAnalyticsItem,
+  DoubtTrendsResponse,
+  SubjectAnalyticsItem,
+  SimilarDoubtClusterItem,
+  ActionableInsight
+} from '../types/api'
 
 export const doubtService = {
   listSubjects: (params?: { q?: string }) => {
@@ -34,12 +50,14 @@ export const doubtService = {
   }) => api.post('/doubts/search-feedback', data),
   listDoubts: (params?: {
     subjectId?: string
+    authorId?: string
     isResolved?: boolean
     page?: number
     limit?: number
   }) => {
     const qs = new URLSearchParams()
     if (params?.subjectId) qs.set('subjectId', params.subjectId)
+    if (params?.authorId) qs.set('authorId', params.authorId)
     if (typeof params?.isResolved === 'boolean') qs.set('isResolved', String(params.isResolved))
     if (params?.page) qs.set('page', String(params.page))
     if (params?.limit) qs.set('limit', String(params.limit))
@@ -140,5 +158,65 @@ export const doubtService = {
     messageId: string
     reason: 'FACTUALLY_INCORRECT' | 'INCORRECT_CODE' | 'MISLEADING_EXPLANATION' | 'TRANSLATION_ISSUE' | 'OTHER'
     details?: string
-  }) => api.post<{ id: string; status: string; message: string }>('/ai/report', data)
+  }) => api.post<{ id: string; status: string; message: string }>('/ai/report', data),
+
+  // Student Doubt Analytics (Faculty / Admin Protected)
+  getAnalyticsSummary: (params?: { startDate?: string; endDate?: string; subjectId?: string }) => {
+    const qs = new URLSearchParams()
+    if (params?.startDate) qs.set('startDate', params.startDate)
+    if (params?.endDate) qs.set('endDate', params.endDate)
+    if (params?.subjectId) qs.set('subjectId', params.subjectId)
+    const q = qs.toString()
+    return api.get<AnalyticsSummary>(`/analytics/summary${q ? `?${q}` : ''}`)
+  },
+
+  getMostAskedTopics: async (params?: { startDate?: string; endDate?: string; subjectId?: string; limit?: number }) => {
+    const qs = new URLSearchParams()
+    if (params?.startDate) qs.set('startDate', params.startDate)
+    if (params?.endDate) qs.set('endDate', params.endDate)
+    if (params?.subjectId) qs.set('subjectId', params.subjectId)
+    if (params?.limit) qs.set('limit', String(params.limit))
+    const q = qs.toString()
+    const res = await api.get<any>(`/analytics/topics${q ? `?${q}` : ''}`)
+    return (Array.isArray(res) ? res : res?.topics || []) as TopicAnalyticsItem[]
+  },
+
+  getDoubtTrends: (params?: { startDate?: string; endDate?: string; subjectId?: string; granularity?: 'day' | 'week' }) => {
+    const qs = new URLSearchParams()
+    if (params?.startDate) qs.set('startDate', params.startDate)
+    if (params?.endDate) qs.set('endDate', params.endDate)
+    if (params?.subjectId) qs.set('subjectId', params.subjectId)
+    if (params?.granularity) qs.set('granularity', params.granularity)
+    const q = qs.toString()
+    return api.get<DoubtTrendsResponse>(`/analytics/trends${q ? `?${q}` : ''}`)
+  },
+
+  getSubjectWiseStats: (params?: { startDate?: string; endDate?: string }) => {
+    const qs = new URLSearchParams()
+    if (params?.startDate) qs.set('startDate', params.startDate)
+    if (params?.endDate) qs.set('endDate', params.endDate)
+    const q = qs.toString()
+    return api.get<SubjectAnalyticsItem[]>(`/analytics/subjects${q ? `?${q}` : ''}`)
+  },
+
+  getSimilarClusters: async (params?: { startDate?: string; endDate?: string; subjectId?: string; limit?: number }) => {
+    const qs = new URLSearchParams()
+    if (params?.startDate) qs.set('startDate', params.startDate)
+    if (params?.endDate) qs.set('endDate', params.endDate)
+    if (params?.subjectId) qs.set('subjectId', params.subjectId)
+    if (params?.limit) qs.set('limit', String(params.limit))
+    const q = qs.toString()
+    const res = await api.get<any>(`/analytics/clusters${q ? `?${q}` : ''}`)
+    return (Array.isArray(res) ? res : res?.clusters || []) as SimilarDoubtClusterItem[]
+  },
+
+  getActionableInsights: async (params?: { startDate?: string; endDate?: string; subjectId?: string }) => {
+    const qs = new URLSearchParams()
+    if (params?.startDate) qs.set('startDate', params.startDate)
+    if (params?.endDate) qs.set('endDate', params.endDate)
+    if (params?.subjectId) qs.set('subjectId', params.subjectId)
+    const q = qs.toString()
+    const res = await api.get<any>(`/analytics/insights${q ? `?${q}` : ''}`)
+    return (Array.isArray(res) ? res : res?.insights || []) as ActionableInsight[]
+  }
 }

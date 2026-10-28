@@ -5,12 +5,16 @@ import { registerSchema, loginSchema } from '../validators/auth.js'
 import { requireAuth } from '../middleware/auth.js'
 import rateLimit from 'express-rate-limit'
 import { asyncWrap } from '../utils/asyncWrap.js'
+import { env } from '../config/env.js'
 
 const router = Router()
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20
+  max: env.NODE_ENV === 'development' || env.NODE_ENV === 'test' ? 1000 : 20,
+  message: { error: 'Too many authentication attempts. Please try again later.' },
+  standardHeaders: true,
+  skip: (req) => Boolean(env.NODE_ENV === 'development' && (req.ip === '127.0.0.1' || req.ip === '::1' || req.ip?.includes('127.0.0.1')))
 })
 
 router.post('/register', authLimiter, validate(registerSchema), asyncWrap(register))

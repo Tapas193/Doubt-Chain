@@ -26,6 +26,7 @@ model User {
   identificationNumber  String?
   passwordHash          String
   preferredLanguage     String?    @default("en")
+  role                  String?    @default("STUDENT")
   createdAt             DateTime   @default(now())
   updatedAt             DateTime   @updatedAt
 
@@ -39,6 +40,14 @@ model User {
   aiConversations AiAssistantConversation[]
   aiFeedbacks     AiResponseFeedback[]
   aiReports       AiResponseReport[]
+  createdCommunities Community[] @relation("CommunityCreator")
+  communityMemberships CommunityMember[]
+  reviewedMemberships CommunityMember[] @relation("ReviewedMemberships")
+  communityAnnouncements CommunityAnnouncement[]
+  sharedDoubts Doubt[] @relation("DoubtSharedBy")
+  notifications Notification[]
+  discussionReports DiscussionReport[]
+  resolvedReports DiscussionReport[] @relation("ReportResolver")
 
   @@index([profession])
 }
@@ -52,8 +61,9 @@ model Subject {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  doubts  Doubt[]
-  members SubjectMember[]
+  doubts        Doubt[]
+  members       SubjectMember[]
+  topicClusters TopicCluster[]
 }
 
 model SubjectMember {
@@ -93,6 +103,7 @@ model Doubt {
 
   attachments Attachment[]
   embedding   DoubtEmbedding?
+  topicAssignment DoubtTopicAssignment?
   feedbacks   SearchFeedback[]
 
   aiQuestion    String?
@@ -101,8 +112,18 @@ model Doubt {
   aiGeneratedAt DateTime?
   aiStatus      ProcessingStatus  @default(COMPLETED)
 
+  communityId                String?
+  community                  Community?         @relation(fields: [communityId], references: [id], onDelete: SetNull)
+  isSharedWithWiderNetwork   Boolean            @default(false)
+  sharedAt                   DateTime?
+  sharedById                 String?
+  sharedBy                   User?              @relation("DoubtSharedBy", fields: [sharedById], references: [id], onDelete: SetNull)
+  academicCategory           String?            @default("GENERAL_DOUBT")
+  reports                    DiscussionReport[]
+
   @@index([subjectId, isResolved, createdAt])
   @@index([authorId])
+  @@index([communityId, isSharedWithWiderNetwork])
 }
 
 model Answer {
@@ -128,6 +149,7 @@ model Answer {
   upvotes     AnswerUpvote[]
   comments    AnswerComment[]
   attachments Attachment[]
+  reports     DiscussionReport[]
 
   @@index([doubtId, createdAt])
   @@index([authorId])
@@ -305,4 +327,167 @@ model AiResponseReport {
   @@unique([userId, messageId])
   @@index([userId])
   @@index([messageId])
+}
+
+model TopicCluster {
+  id          String   @id @default(cuid())
+  name        String
+  subjectId   String?
+  subject     Subject? @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  vector      Float[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assignments DoubtTopicAssignment[]
+
+  @@index([subjectId])
+  @@index([name])
+}
+
+model DoubtTopicAssignment {
+  id         String       @id @default(cuid())
+  doubtId    String       @unique
+  doubt      Doubt        @relation(fields: [doubtId], references: [id], onDelete: Cascade)
+  topicId    String
+  topic      TopicCluster @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  similarity Float        @default(1.0)
+  createdAt  DateTime     @default(now())
+
+  @@index([topicId])
+  @@index([doubtId])
+}
+
+model Community {
+  id           String            @id @default(cuid())
+  name         String            @unique
+  code         String            @unique
+  slug         String            @unique
+  description  String?
+  logoUrl      String?
+  emailDomain  String?
+  department   String?
+  academicYear String?
+  location     String?
+  isVerified   Boolean           @default(true)
+  status       CommunityStatus   @default(ACTIVE)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  creatorId    String?
+  creator      User?             @relation("CommunityCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+
+  members       CommunityMember[]
+  doubts        Doubt[]
+  announcements CommunityAnnouncement[]
+
+  @@index([code])
+  @@index([slug])
+}
+
+enum CommunityStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model CommunityMember {
+  id              String           @id @default(cuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  communityId     String
+  community       Community        @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  role            CommunityRole    @default(STUDENT)
+  status          MembershipStatus @default(PENDING)
+  isPrimary       Boolean          @default(false)
+  department      String?
+  academicYear    String?
+  requestedAt     DateTime         @default(now())
+  reviewedAt      DateTime?
+  reviewedById    String?
+  reviewedBy      User?            @relation("ReviewedMemberships", fields: [reviewedById], references: [id], onDelete: SetNull)
+  rejectionReason String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@unique([userId, communityId])
+  @@index([communityId, status])
+  @@index([userId, isPrimary])
+}
+
+enum CommunityRole {
+  STUDENT
+  MODERATOR
+  COLLEGE_ADMIN
+}
+
+enum MembershipStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+model CommunityAnnouncement {
+  id          String    @id @default(cuid())
+  communityId String
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title       String
+  content     String
+  priority    String    @default("NORMAL")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([communityId, createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String
+  linkUrl   String?
+  isRead    Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead, createdAt])
+}
+
+enum NotificationType {
+  MEMBERSHIP_APPROVED
+  MEMBERSHIP_REJECTED
+  NEW_REPLY
+  WIDER_NETWORK_REPLY
+  WIDER_NETWORK_SHARED
+  CONTENT_MODERATED
+}
+
+model DiscussionReport {
+  id           String       @id @default(cuid())
+  doubtId      String?
+  doubt        Doubt?       @relation(fields: [doubtId], references: [id], onDelete: Cascade)
+  answerId     String?
+  answer       Answer?      @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  reporterId   String
+  reporter     User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reason       String
+  details      String?
+  status       ReportStatus @default(PENDING)
+  resolvedById String?
+  resolvedBy   User?        @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([doubtId])
+  @@index([answerId])
+  @@index([status])
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
 }

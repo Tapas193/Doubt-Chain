@@ -12,7 +12,8 @@
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "prisma:migrate:dev": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "assign-admin": "tsx scripts/assign_admin.ts"
   },
   "dependencies": {
     "@google/genai": "^2.31.0",

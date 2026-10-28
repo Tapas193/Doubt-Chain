@@ -9,6 +9,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <title>Doubt-Chain — Peer-to-Peer Academic Resolution</title>
+    <script>
+      (function() {
+        try {
+          var pref = localStorage.getItem('doubt-chain:theme:preference') || 'dark';
+          var isDark = pref === 'dark' || (pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var resolved = isDark ? 'dark' : 'light';
+          document.documentElement.dataset.theme = resolved;
+          document.documentElement.style.colorScheme = resolved;
+          document.documentElement.style.backgroundColor = isDark ? '#080B14' : '#FFFFFF';
+        } catch(e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

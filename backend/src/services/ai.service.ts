@@ -78,6 +78,158 @@ export interface TranslationResult {
 }
 
 /**
+ * Robustly extracts clean translated text from Gemini output.
+ * Guarantees that raw JSON structures like {"translatedText": ...} are never returned to callers.
+ */
+export function extractCleanTranslatedText(raw: string): { translatedText: string; detectedSourceLang: string } {
+  if (!raw) return { translatedText: '', detectedSourceLang: 'unknown' }
+  let cleaned = raw.trim()
+
+  // Strip markdown code fences if wrapped as ```json ... ```
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim()
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```\s*/, '').replace(/\s*```$/, '').trim()
+  }
+
+  // 1. Try standard JSON.parse on full text
+  try {
+    const parsed = JSON.parse(cleaned)
+    if (parsed && typeof parsed === 'object') {
+      let tText = typeof parsed.translatedText === 'string' ? parsed.translatedText.trim() : ''
+      // If translatedText was itself nested JSON, unwrap it
+      if (tText.startsWith('{') && tText.includes('"translatedText"')) {
+        const nested = extractCleanTranslatedText(tText)
+        tText = nested.translatedText
+      }
+      if (tText) {
+        return {
+          translatedText: tText,
+          detectedSourceLang: parsed.detectedSourceLang || 'unknown'
+        }
+      }
+    }
+  } catch {
+    // continue to substring extraction
+  }
+
+  // 2. Try JSON.parse on first JSON object substring
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0])
+      if (parsed && typeof parsed === 'object' && typeof parsed.translatedText === 'string') {
+        let tText = parsed.translatedText.trim()
+        if (tText.startsWith('{') && tText.includes('"translatedText"')) {
+          const nested = extractCleanTranslatedText(tText)
+          tText = nested.translatedText
+        }
+        if (tText) {
+          return {
+            translatedText: tText,
+            detectedSourceLang: parsed.detectedSourceLang || 'unknown'
+          }
+        }
+      }
+    } catch {
+      // continue to regex extraction
+    }
+  }
+
+  // 3. Fallback: regex extraction of "translatedText": "..."
+  const textMatch = cleaned.match(/"translatedText"\s*:\s*"([\s\S]*?)"(?:\s*,\s*"detectedSourceLang"|\s*\})/)
+  if (textMatch && textMatch[1]) {
+    let rawExtracted = textMatch[1]
+      .replace(/\\n/g, '\n')
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, '\\')
+      .replace(/\\r/g, '')
+      .replace(/\\t/g, '\t')
+      .trim()
+    if (rawExtracted.startsWith('{') && rawExtracted.includes('"translatedText"')) {
+      const nested = extractCleanTranslatedText(rawExtracted)
+      rawExtracted = nested.translatedText
+    }
+    const langMatch = cleaned.match(/"detectedSourceLang"\s*:\s*"([^"]+)"/)
+    return {
+      translatedText: rawExtracted,
+      detectedSourceLang: langMatch ? langMatch[1] : 'unknown'
+    }
+  }
+
+  // 4. If raw text starts with { and includes "translatedText", strip outer wrapper
+  if (cleaned.startsWith('{') && cleaned.includes('"translatedText"')) {
+    const stripped = cleaned
+      .replace(/^\s*\{\s*"translatedText"\s*:\s*"?/, '')
+      .replace(/"?\s*(?:,\s*"detectedSourceLang"[\s\S]*)?\}\s*$/, '')
+      .trim()
+    return {
+      translatedText: stripped,
+      detectedSourceLang: 'unknown'
+    }
+  }
+
+  // 5. Final fallback: raw text (when not JSON at all)
+  return {
+    translatedText: cleaned,
+    detectedSourceLang: 'unknown'
+  }
+}
+
+/**
+ * Safely extracts clean human-readable educational text from Gemini responses.
+ * If Gemini returned a JSON object or string (e.g. {"translatedText": ...} or {"answer": ...}),
+ * this unwraps the text and prevents raw JSON from being stored or displayed.
+ */
+export function extractCleanExplanation(raw: string): string {
+  if (!raw) return ''
+  let cleaned = raw.trim()
+
+  // Strip markdown code fences if wrapped as ```json ... ```
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim()
+  } else if (cleaned.startsWith('```') && cleaned.endsWith('```') && (cleaned.includes('"translatedText"') || cleaned.includes('"answer"'))) {
+    cleaned = cleaned.replace(/^```\s*/, '').replace(/\s*```$/, '').trim()
+  }
+
+  // If starts with { and contains key properties
+  if (cleaned.startsWith('{') && (cleaned.includes('"translatedText"') || cleaned.includes('"answer"') || cleaned.includes('"explanation"'))) {
+    try {
+      const parsed = JSON.parse(cleaned)
+      if (parsed && typeof parsed === 'object') {
+        if (typeof parsed.translatedText === 'string' && parsed.translatedText.trim()) {
+          return extractCleanExplanation(parsed.translatedText)
+        }
+        if (typeof parsed.answer === 'string' && parsed.answer.trim()) {
+          return extractCleanExplanation(parsed.answer)
+        }
+        if (typeof parsed.explanation === 'string' && parsed.explanation.trim()) {
+          return extractCleanExplanation(parsed.explanation)
+        }
+      }
+    } catch {
+      // Regex extraction fallback for unescaped newlines/quotes in Gemini JSON
+      const match = cleaned.match(/"(?:translatedText|answer|explanation)"\s*:\s*"([\s\S]*?)"(?:\s*,\s*"detectedSourceLang"|\s*\})/)
+      if (match && match[1]) {
+        let extracted = match[1]
+          .replace(/\\n/g, '\n')
+          .replace(/\\"/g, '"')
+          .replace(/\\\\/g, '\\')
+          .replace(/\\r/g, '')
+          .replace(/\\t/g, '\t')
+          .trim()
+        if (extracted.startsWith('{') && extracted.includes('"translatedText"')) {
+          extracted = extractCleanExplanation(extracted)
+        }
+        return extracted
+      }
+    }
+  }
+
+  return cleaned
+}
+
+/**
  * Translate academic content between English, Hindi, and Hinglish with caching.
  */
 export async function translateContent(input: {
@@ -109,8 +261,9 @@ export async function translateContent(input: {
     .catch(() => null)
 
   if (cached) {
+    const cleanCached = extractCleanTranslatedText(cached.translatedText).translatedText || cached.translatedText
     return {
-      translatedText: cached.translatedText,
+      translatedText: cleanCached,
       targetLang: input.targetLang,
       sourceLang: cached.sourceLang || 'unknown',
       fromCache: true
@@ -127,16 +280,17 @@ export async function translateContent(input: {
 Translate the following academic doubt/answer text accurately into the requested target language.
 
 Target Language: ${input.targetLang}
-- If target is "hi": Translate into natural Hindi (Devanagari script). Preserve code blocks, math formulas, variable names, and core computer science / engineering terms (e.g., array, recursion, binary search, time complexity, API) in English/transliterated where natural.
-- If target is "hinglish": Translate into natural everyday conversational Hinglish using the Roman alphabet (e.g., "Binary search ki time complexity O(log n) hoti hai"). Preserve code, syntax, and technical terminology exactly.
-- If target is "en": Translate accurately into fluent, clear English.
+- If target is "hi": Translate into authentic Hindi using the Devanagari script (हिन्दी). Preserve code blocks, math formulas, variable names, and core computer science / engineering terms (e.g., Red-Black Tree, rotation, pointer, insertion, deletion, time complexity, array, recursion, binary search, API) in English/transliterated where natural.
+- If target is "hinglish": Respond in natural Hinglish using the Roman/English alphabet only. Mix Hindi and English naturally, as people commonly speak in India. Do not use Devanagari script. Preserve English technical terminology, code, formulas, and mathematical notation. Return the complete educational explanation directly in the required response format.
+- If target is "en": Translate accurately into fluent, clear English. Preserve code, formulas, and technical terminology.
 
 Rules:
 1. Preserve all markdown formatting, backticks, equations, and code blocks untouched.
-2. Return a JSON object with:
-   - "translatedText": the translated text
+2. For Hinglish: Do not use Devanagari script under any circumstances. Use Roman/English alphabet only.
+3. Return a JSON object with:
+   - "translatedText": the translated text string
    - "detectedSourceLang": detected source language (e.g. "en", "hi", "hinglish")
-3. Return ONLY valid JSON: {"translatedText": string, "detectedSourceLang": string}
+4. Return ONLY valid JSON: {"translatedText": string, "detectedSourceLang": string}
 
 Original Text:
 ${cleanText}`
@@ -147,21 +301,9 @@ ${cleanText}`
   })
 
   const raw = response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
-  const jsonMatch = raw.match(/\{[\s\S]*\}/)
-  let translatedText = raw
-  let detectedSourceLang = 'unknown'
-
-  if (jsonMatch) {
-    try {
-      const parsed = JSON.parse(jsonMatch[0])
-      if (parsed.translatedText) {
-        translatedText = parsed.translatedText
-        detectedSourceLang = parsed.detectedSourceLang || 'unknown'
-      }
-    } catch {
-      // fallback to raw text
-    }
-  }
+  const extracted = extractCleanTranslatedText(raw)
+  const translatedText = extracted.translatedText || raw
+  const detectedSourceLang = extracted.detectedSourceLang || 'unknown'
 
   // 3. Cache translation in DB
   await prisma.contentTranslation
@@ -179,7 +321,8 @@ ${cleanText}`
         translatedText
       },
       update: {
-        translatedText
+        translatedText,
+        sourceLang: detectedSourceLang
       }
     })
     .catch(() => {})
@@ -540,16 +683,16 @@ export async function askStudyAssistant(input: StudyAssistantInput): Promise<Stu
 
   // 4. Construct System Instructions & Boundaries
   const languageInstructions: Record<'en' | 'hi' | 'hinglish', string> = {
-    en: 'Respond in clear, accessible, and structured English.',
-    hi: 'Respond in authentic Hindi using the Devanagari script (हिन्दी). Keep all programming code blocks, formulas, equations, variable names, and technical CS terms (like "binary search", "recursion", "time complexity", "API", "array") in standard English/transliterated for student clarity.',
-    hinglish: 'Respond in natural, conversational Hinglish using the Roman alphabet (e.g. "Binary search ki time complexity O(log n) hoti hai"). Preserve all code, syntax, identifiers, equations, and technical computer science terminology exactly.'
+    en: 'Respond in clear, accessible, and structured English. Preserve technical terms, code blocks, formulas, and mathematical notation.',
+    hi: 'Respond in authentic Hindi using the Devanagari script (हिन्दी). Keep all programming code blocks, formulas, equations, variable names, and technical CS terms (like "binary search", "recursion", "time complexity", "API", "array", "Red-Black Tree", "rotation") in standard English/transliterated for student clarity.',
+    hinglish: 'Respond in natural Hinglish using the Roman/English alphabet only. Mix Hindi and English naturally, as people commonly speak in India. Do not use Devanagari script. Preserve English technical terminology, code, formulas, and mathematical notation. Return the complete educational explanation directly in the required response format.'
   }
 
   const modeInstructions = {
     beginner: 'Explain from foundational concepts using simple language and analogies.',
     'step-by-step': 'Provide a rigorous, numbered step-by-step breakdown.',
     example: 'Ground your explanation primarily around practical, concrete examples.',
-    hinglish: 'Use natural Hinglish (conversational Hindi-English mix) suitable for college students.',
+    hinglish: 'Respond in natural Hinglish using the Roman/English alphabet only. Mix Hindi and English naturally, as people commonly speak in India. Do not use Devanagari script. Preserve English technical terminology, code, formulas, and mathematical notation. Return the complete educational explanation directly in the required response format.',
     debug: 'Analyze code/logic errors step-by-step, explain why they occur, and provide the clean fix.'
   }
 
@@ -589,9 +732,24 @@ Core Principles & Safety:
    - Do not claim an answer is human-verified unless referring specifically to the verified solutions inside <retrieved_doubt_chain_context>.
    - Clearly label your own explanation as AI-generated.
    - If reliable information is unavailable, acknowledge uncertainty.
-6. Language:
-   ${languageInstructions[targetLanguage]}
-   Explanation Style: ${modeInstructions[selectedMode]}
+6. Language & Script Enforcement:
+   - Selected Response Language: ${targetLanguage.toUpperCase()}
+   - Language Rule: ${languageInstructions[targetLanguage]}
+   ${targetLanguage === 'hinglish' ? `
+   CRITICAL FOR HINGLISH:
+   * Do NOT use Devanagari script anywhere (never output characters like हिन्दी, में, एक, है, etc.).
+   * Use the Roman / English alphabet exclusively for all Hindi words.
+   * Preserve all English technical terms, code, variable names, formulas, and time complexities as standard English (e.g. Red-Black Tree, rotation, pointer, insertion, deletion, time complexity, root, node).
+   * Example: "Red-Black Tree mein Rotation ek technique hai jisse hum tree ko balance karte hain bina BST ki properties break kiye."
+   * NEVER return a raw JSON object wrapper like {"translatedText": ...}. Return the complete educational explanation directly.` : ''}
+   ${targetLanguage === 'hi' ? `
+   CRITICAL FOR HINDI:
+   * Write authentic Hindi using Devanagari script (हिन्दी).
+   * Preserve code blocks, math formulas, variable names, and technical terms in English.` : ''}
+   ${targetLanguage === 'en' ? `
+   CRITICAL FOR ENGLISH:
+   * Respond in standard, fluent academic English.` : ''}
+   - Explanation Style: ${modeInstructions[selectedMode]}
 `
 
   // Format multi-turn conversation
@@ -619,7 +777,8 @@ Provide your structured explanation now:`
   })
 
   const rawAnswer = response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
-  if (!rawAnswer) {
+  const cleanAnswer = extractCleanExplanation(rawAnswer)
+  if (!cleanAnswer) {
     throw new HttpError(502, 'AI model returned an empty response. Please retry.')
   }
 
@@ -657,21 +816,21 @@ Provide your structured explanation now:`
       data: {
         conversationId: targetConversationId,
         role: 'assistant',
-        content: rawAnswer,
+        content: cleanAnswer,
         retrievedContext: retrievedContext.length > 0 ? (retrievedContext as any) : undefined
       }
     })
 
-    // Update conversation timestamp
+    // Update conversation timestamp and language
     await prisma.aiAssistantConversation.update({
       where: { id: targetConversationId },
-      data: { updatedAt: new Date() }
+      data: { updatedAt: new Date(), language: targetLanguage }
     })
 
     return {
       messageId: savedAssistantMessage.id,
       conversationId: targetConversationId,
-      answer: rawAnswer,
+      answer: cleanAnswer,
       language: targetLanguage,
       generatedBy: 'Gemini AI',
       disclaimer: 'AI-generated explanation. Always verify academic formulas and code with your coursework.',
@@ -680,7 +839,7 @@ Provide your structured explanation now:`
   }
 
   return {
-    answer: rawAnswer,
+    answer: cleanAnswer,
     language: targetLanguage,
     generatedBy: 'Gemini AI',
     disclaimer: 'AI-generated explanation. Always verify academic formulas and code with your coursework.',

@@ -99,4 +99,52 @@ describe('Multilingual Services & Cross-Language Retrieval', () => {
       expect(unrelatedSimilarity).toBeLessThan(0.3)
     })
   })
+
+  describe('Clean JSON Response & Translation Handling', () => {
+    it('unwraps JSON translation objects cleanly', async () => {
+      const { extractCleanTranslatedText } = await import('../src/services/ai.service.js')
+      const raw = JSON.stringify({
+        translatedText: 'Red-Black Tree mein Rotation ek technique hai jisse hum tree ko balance karte hain.',
+        detectedSourceLang: 'hinglish'
+      })
+      const result = extractCleanTranslatedText(raw)
+      expect(result.translatedText).toBe('Red-Black Tree mein Rotation ek technique hai jisse hum tree ko balance karte hain.')
+      expect(result.detectedSourceLang).toBe('hinglish')
+    })
+
+    it('unwraps markdown-wrapped JSON code fences', async () => {
+      const { extractCleanTranslatedText } = await import('../src/services/ai.service.js')
+      const raw = '```json\n{\n  "translatedText": "Binary search O(log n) leta hai",\n  "detectedSourceLang": "en"\n}\n```'
+      const result = extractCleanTranslatedText(raw)
+      expect(result.translatedText).toBe('Binary search O(log n) leta hai')
+      expect(result.detectedSourceLang).toBe('en')
+    })
+
+    it('recovers from unescaped newlines in Gemini JSON output', async () => {
+      const { extractCleanTranslatedText } = await import('../src/services/ai.service.js')
+      // Malformed JSON with literal raw newline inside string value
+      const raw = '{\n  "translatedText": "Line 1 in Hinglish.\nLine 2 with code.",\n  "detectedSourceLang": "hinglish"\n}'
+      const result = extractCleanTranslatedText(raw)
+      expect(result.translatedText).toContain('Line 1 in Hinglish.')
+      expect(result.translatedText).toContain('Line 2 with code.')
+      expect(result.detectedSourceLang).toBe('hinglish')
+    })
+
+    it('unwraps JSON objects in AI Study Assistant explanations', async () => {
+      const { extractCleanExplanation } = await import('../src/services/ai.service.js')
+      const raw = JSON.stringify({
+        translatedText: 'Red-Black Tree mein rotation ek technique hai.',
+        detectedSourceLang: 'hinglish'
+      })
+      const clean = extractCleanExplanation(raw)
+      expect(clean).toBe('Red-Black Tree mein rotation ek technique hai.')
+    })
+
+    it('preserves plain educational explanations unchanged', async () => {
+      const { extractCleanExplanation } = await import('../src/services/ai.service.js')
+      const text = 'Red-Black Tree mein Rotation ek technique hai jisse hum tree ko balance karte hain bina BST ki properties break kiye.'
+      const clean = extractCleanExplanation(text)
+      expect(clean).toBe(text)
+    })
+  })
 })

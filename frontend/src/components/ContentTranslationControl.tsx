@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { api } from '../lib/apiClient'
 import { useLanguage } from '../i18n/LanguageContext'
 import { SupportedLanguage } from '../i18n/types'
+import { extractCleanText } from '../utils/cleanText'
 
 interface ContentTranslationControlProps {
   originalText: string
@@ -59,8 +60,9 @@ export const ContentTranslationControl: React.FC<ContentTranslationControlProps>
       })
 
       if (response && response.translatedText) {
-        setTranslatedText(response.translatedText)
-        setCache((prev) => ({ ...prev, [targetLang]: response.translatedText }))
+        const cleanResult = extractCleanText(response.translatedText)
+        setTranslatedText(cleanResult)
+        setCache((prev) => ({ ...prev, [targetLang]: cleanResult }))
       } else {
         setError('Translation returned empty result')
       }

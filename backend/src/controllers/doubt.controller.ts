@@ -24,9 +24,10 @@ export async function create(req: AuthRequest, res: Response) {
 }
 
 export async function list(req: AuthRequest, res: Response) {
-  const { subjectId, isResolved, page, limit } = req.query as any
+  const { subjectId, isResolved, page, limit, authorId } = req.query as any
   const result = await listDoubts({
     subjectId,
+    authorId,
     isResolved: isResolved === 'true' ? true : isResolved === 'false' ? false : undefined,
     page: page ? Number(page) : undefined,
     limit: limit ? Number(limit) : undefined
@@ -35,7 +36,7 @@ export async function list(req: AuthRequest, res: Response) {
 }
 
 export async function getById(req: AuthRequest, res: Response) {
-  const doubt = await getDoubtById(req.params.id)
+  const doubt = await getDoubtById(req.params.id, req.user?.userId)
   res.json(ok(doubt))
 }
 

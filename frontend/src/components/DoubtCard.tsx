@@ -24,7 +24,7 @@ export default function DoubtCard({ title, excerpt, subject, status = 'unresolve
             <StatusBadge status={status} />
           </div>
 
-          <h3 className="truncate text-base font-semibold text-dc-text group-hover:text-white transition-colors">
+          <h3 className="truncate text-base font-semibold text-dc-text group-hover:text-dc-blue transition-colors">
             {title}
           </h3>
 

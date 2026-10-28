@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.js'
 import { HttpError } from '../middleware/errorHandler.js'
+import { createNotification } from './notification.service.js'
 
 const answerInclude = {
   author: { select: { id: true, username: true, displayName: true } },
@@ -78,9 +79,34 @@ export async function createAnswer(input: {
   mediaUrl?: string
   mediaType?: 'IMAGE' | 'AUDIO'
 }) {
-  const doubt = await prisma.doubt.findUnique({ where: { id: input.doubtId } })
+  const doubt = await prisma.doubt.findUnique({
+    where: { id: input.doubtId },
+    include: { community: true }
+  })
   if (!doubt) {
     throw new HttpError(404, 'Doubt not found')
+  }
+
+  // Strict privacy rule: if college discussion is not shared with wider network,
+  // only approved members or platform admins can reply.
+  if (doubt.communityId && !doubt.isSharedWithWiderNetwork) {
+    const author = await prisma.user.findUnique({
+      where: { id: input.authorId },
+      select: { role: true, email: true }
+    })
+    const isPlatformAdmin = author?.role === 'ADMIN' || Boolean(author?.email?.toLowerCase().includes('admin@'))
+    if (!isPlatformAdmin) {
+      const membership = await prisma.communityMember.findFirst({
+        where: {
+          communityId: doubt.communityId,
+          userId: input.authorId,
+          status: 'APPROVED'
+        }
+      })
+      if (!membership) {
+        throw new HttpError(403, 'Forbidden: Only verified community members can reply to this private college discussion')
+      }
+    }
   }
 
   let effectiveParentId = input.parentAnswerId
@@ -109,12 +135,40 @@ export async function createAnswer(input: {
     },
     include: {
       ...answerInclude,
+      author: {
+        select: {
+          id: true,
+          username: true,
+          displayName: true,
+          communityMemberships: {
+            where: { status: 'APPROVED', isPrimary: true },
+            select: { community: { select: { id: true, name: true, code: true } } }
+          }
+        }
+      },
       replies: {
         where: { isDeleted: false },
         include: answerInclude
       }
     }
   })
+
+  // Notify original doubt author if someone else answered
+  if (doubt.authorId !== input.authorId) {
+    const responderName = created.author?.displayName || 'A peer'
+    const responderCollege = (created.author as any)?.communityMemberships?.[0]?.community?.code
+    const isWiderReply = doubt.isSharedWithWiderNetwork && Boolean(responderCollege)
+
+    createNotification({
+      userId: doubt.authorId,
+      type: isWiderReply ? 'WIDER_NETWORK_REPLY' : 'NEW_REPLY',
+      title: isWiderReply ? 'Wider Network Reply' : 'New Reply to Your Discussion',
+      message: isWiderReply
+        ? `${responderName} from [${responderCollege}] answered your shared question: "${doubt.title}"`
+        : `${responderName} posted a reply on your discussion: "${doubt.title}"`,
+      linkUrl: `/doubts/${doubt.id}`
+    }).catch(console.error)
+  }
 
   return serializeAnswer(created, input.authorId, doubt.acceptedAnswerId)
 }

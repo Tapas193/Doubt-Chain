@@ -6,10 +6,12 @@ import {
   computeContentHash,
   generateFaqFromAcceptedAnswer
 } from './ai.service.js'
+import { assignDoubtToTopicCluster } from './analytics.service.js'
 
 const doubtSummaryInclude = {
   author: { select: { id: true, username: true, displayName: true } },
   subject: { select: { id: true, name: true, code: true } },
+  community: { select: { id: true, name: true, code: true, slug: true, logoUrl: true } },
   acceptedAnswer: {
     select: {
       id: true,
@@ -66,6 +68,7 @@ const doubtDetailInclude = {
 
 type ListFilters = {
   subjectId?: string
+  authorId?: string
   isResolved?: boolean
   page?: number
   limit?: number
@@ -99,7 +102,7 @@ export async function createDoubt(input: {
     primaryMediaType = input.attachments[0].fileType
   }
 
-  return prisma.$transaction(async (tx) => {
+  const created = await prisma.$transaction(async (tx) => {
     const doubt = await tx.doubt.create({
       data: {
         title: input.title,
@@ -135,6 +138,13 @@ export async function createDoubt(input: {
       include: doubtSummaryInclude
     })
   })
+
+  // Auto-cluster doubt asynchronously for analytics
+  assignDoubtToTopicCluster(created.id).catch(err =>
+    console.warn('[Analytics] Auto-clustering background warning:', err)
+  )
+
+  return created
 }
 
 export async function listDoubts(filters: ListFilters) {
@@ -149,6 +159,9 @@ export async function listDoubts(filters: ListFilters) {
       throw new HttpError(404, 'Subject not found')
     }
     where.subjectId = filters.subjectId
+  }
+  if (filters.authorId) {
+    where.authorId = filters.authorId
   }
   if (typeof filters.isResolved === 'boolean') where.isResolved = filters.isResolved
 
@@ -166,7 +179,7 @@ export async function listDoubts(filters: ListFilters) {
   return { items, page, limit, total, totalPages: Math.ceil(total / limit) }
 }
 
-export async function getDoubtById(id: string) {
+export async function getDoubtById(id: string, viewerUserId?: string) {
   const doubt = await prisma.doubt.findUnique({
     where: { id },
     include: doubtDetailInclude
@@ -174,6 +187,38 @@ export async function getDoubtById(id: string) {
   if (!doubt) {
     throw new HttpError(404, 'Doubt not found')
   }
+
+  // Strict backend privacy rule:
+  // If discussion belongs to a college community and is NOT shared with wider network,
+  // only approved members of that community or platform administrators may view it.
+  if (doubt.communityId && !doubt.isSharedWithWiderNetwork) {
+    if (!viewerUserId) {
+      throw new HttpError(403, 'Forbidden: This discussion is private to verified members of this college community')
+    }
+
+    const viewer = await prisma.user.findUnique({
+      where: { id: viewerUserId },
+      select: { role: true, email: true }
+    })
+    const isPlatformAdmin = viewer?.role === 'ADMIN' || Boolean(viewer?.email?.toLowerCase().includes('admin@'))
+
+    if (!isPlatformAdmin) {
+      const isAuthor = doubt.authorId === viewerUserId
+      if (!isAuthor) {
+        const membership = await prisma.communityMember.findFirst({
+          where: {
+            communityId: doubt.communityId,
+            userId: viewerUserId,
+            status: 'APPROVED'
+          }
+        })
+        if (!membership) {
+          throw new HttpError(403, 'Forbidden: This discussion is private to verified members of this college community')
+        }
+      }
+    }
+  }
+
   return doubt
 }
 
