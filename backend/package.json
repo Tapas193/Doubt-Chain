@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -13,7 +13,8 @@
     "prisma:validate": "prisma validate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "assign-admin": "tsx scripts/assign_admin.ts"
+    "assign-admin": "tsx scripts/assign_admin.ts",
+    "prisma:migrate:deploy": "prisma migrate deploy"
   },
   "dependencies": {
     "@google/genai": "^2.31.0",

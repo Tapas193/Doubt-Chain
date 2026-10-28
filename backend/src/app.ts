@@ -29,17 +29,22 @@ app.use(
   })
 )
 
-const allowedOrigins = [
+const rawAllowedOrigins = [
   env.CLIENT_ORIGIN,
   'http://localhost:5173',
   'http://localhost:5174'
 ]
 
+const allowedOrigins = rawAllowedOrigins
+  .flatMap((o) => (o ? o.split(',').map((item) => item.trim()) : []))
+  .map((o) => o.replace(/\/$/, ''))
+
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true)
-      if (allowedOrigins.includes(origin)) return callback(null, true)
+      const normalized = origin.replace(/\/$/, '')
+      if (allowedOrigins.includes(normalized)) return callback(null, true)
       return callback(null, false)
     },
     credentials: true
